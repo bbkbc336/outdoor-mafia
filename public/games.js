@@ -88,7 +88,7 @@ const Games = (() => {
   };
 
   const BUILD = {
-    // 1. 불꽃을 눌러 끄기. 한 번에 안 꺼지고 작아지며, 꺼진 불이 가끔 다시 붙습니다.
+    // 1. 불꽃 12개를 눌러 끄기. 한 번에 안 꺼지고 작아지며, 꺼진 불이 가끔 다시 붙습니다.
     fire(body, d, win) {
       const area = h('div', 'garea fire');
       const hp = d.hp || 1, SIZE = [0, 26, 34, 42];
@@ -106,8 +106,8 @@ const Games = (() => {
           if (--b.hp > 0) return draw();
           b.classList.add('out'); b.textContent = '💨';
           if (++out === d.spots.length) return win({ out });
-          // 다시 붙는 불: 판마다 최대 3번, 2.5초 뒤
-          if (relit < 3 && out % 3 === 0) {
+          // 다시 붙는 불: 판마다 최대 4번, 2.5초 뒤
+          if (relit < 4 && out % 3 === 0) {
             relit++;
             setTimeout(() => {
               if (done) return;
@@ -125,9 +125,9 @@ const Games = (() => {
       body.appendChild(area);
     },
 
-    // 2. 왼쪽 색 점을 오른쪽 같은 색 점까지 끌어서 전선 잇기 (점을 차례로 눌러도 됨). 7쌍.
+    // 2. 왼쪽 색 점을 오른쪽 같은 색 점까지 끌어서 전선 잇기 (점을 차례로 눌러도 됨). 8쌍.
     power(body, d, win) {
-      const WIRE = { red: '#ff4d5e', orange: '#ff9f1c', yellow: '#ffd23f', green: '#3ddc84', blue: '#4da3ff', purple: '#b07cff', white: '#f4f6fb' };
+      const WIRE = { red: '#ff4d5e', orange: '#ff9f1c', yellow: '#ffd23f', green: '#3ddc84', blue: '#4da3ff', purple: '#b07cff', pink: '#ff7ad9', white: '#f4f6fb' };
       const box = h('div', 'wires');
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       box.appendChild(svg);
@@ -185,7 +185,7 @@ const Games = (() => {
       body.appendChild(box);
     },
 
-    // 3. 다이얼을 돌려 화살표(▼)를 위에 보이는 숫자에 차례로 맞추기. 손을 떼면 가까운 숫자에 멈춥니다.
+    // 3. 다이얼을 돌려 화살표(▼)를 위에 보이는 숫자 6개에 차례로 맞추기. 손을 떼면 가까운 숫자에 멈춥니다.
     lock(body, d, win) {
       const N = 20, STEP = 360 / N;
       const goal = h('div', 'dialgoal', d.code.map((n, i) => `<span class="${i === 0 ? 'hint' : ''}">${n}</span>`).join(''));
@@ -261,7 +261,6 @@ const Games = (() => {
         g.beginPath(); g.arc(Math.random() * W, Math.random() * H, 2 + Math.random() * 10, 0, 7); g.fill();
       }
       g.globalCompositeOperation = 'destination-out';
-      g.globalAlpha = d.wipe || 1; // 한 번 문지를 때 지워지는 정도
       g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = Math.max(40, W / 8);
       let last = null, checkAt = 0;
       const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -277,12 +276,16 @@ const Games = (() => {
         return clear / n;
       };
       win.step('0%');
-      cv.addEventListener('pointerdown', (e) => { if (done) return; cv.setPointerCapture(e.pointerId); last = pos(e); finger.remove(); });
+      // 아주 빨리 문질러도 더 많이 지워지지 않게, 손가락 속도가 SPEED(px/초)를 넘으면 그만큼 덜 지웁니다.
+      const SPEED = d.speed || 1e9;
+      let lastT = 0;
+      cv.addEventListener('pointerdown', (e) => { if (done) return; cv.setPointerCapture(e.pointerId); last = pos(e); lastT = e.timeStamp; finger.remove(); });
       cv.addEventListener('pointermove', (e) => {
         if (!last || done) return;
-        const p = pos(e);
+        const p = pos(e), len = Math.hypot(p[0] - last[0], p[1] - last[1]), dt = Math.max(1, e.timeStamp - lastT);
+        g.globalAlpha = (d.wipe || 1) * Math.min(1, SPEED / (len / dt * 1000));
         g.beginPath(); g.moveTo(last[0], last[1]); g.lineTo(p[0], p[1]); g.stroke();
-        last = p;
+        last = p; lastT = e.timeStamp;
         if (Date.now() > checkAt) {
           checkAt = Date.now() + 150;
           const c = cleaned();

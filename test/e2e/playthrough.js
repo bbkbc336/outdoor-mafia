@@ -105,17 +105,19 @@ async function playGame(page) {
   } else if (await g.locator('.order').count()) {
     for (let n = 1; n <= 25; n++) await g.locator('.order button').filter({ hasText: new RegExp(`^${n}$`) }).tap();
   } else if (await g.locator('canvas').count()) {
-    for (let pass = 0; pass < 15 && !(await won()); pass++) {
-      const b = await g.locator('canvas').boundingBox();
-      if (!b) { await sleep(300); continue; }
-      for (let y = b.y + 10; y < b.y + b.height; y += 36) {
-        if (await won()) break;
-        // 둥근 렌즈라 가운데에서 시작해 양쪽 끝까지 문지릅니다.
-        const cx = b.x + b.width / 2;
-        await touchDrag(page, [cx, y], [b.x + 4, y], 4);
-        await touchDrag(page, [cx, y], [b.x + b.width - 4, y], 4);
+    // 너무 빨리 문지르면 덜 지워지므로 사람 손 속도로 문지릅니다.
+    const send = (type, x, y) => page.cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const bb = await g.locator('canvas').boundingBox(); const cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2, R = bb.width / 2 - 12;
+    // 지그재그로 문지르기 (줄 간격 25px, 손가락 속도 초당 약 1200px)
+    for (let pass = 0; pass < 20 && !(await won()); pass++) {
+      let x = cx, y = cy - R;
+      await send('touchStart', x, y);
+      for (let row = 0; y < cy + R && !(await won()); row++, y += 25) {
+        const half = Math.sqrt(Math.max(0, R * R - (y - cy) ** 2)), tx = cx + (row % 2 ? half : -half), x0 = x;
+        const n = Math.max(1, Math.round(Math.abs(tx - x0) / 1200 * 1000 / 16));
+        for (let i = 1; i <= n; i++) { x = x0 + (tx - x0) * i / n; await send('touchMove', x, y); await sleep(16); }
       }
-      await sleep(500); // 다음 렌즈로 넘어가는 시간
+      await send('touchEnd');
     }
   } else if (await g.locator('.crate').count()) {
     const NAME = { 'rgb(255, 77, 94)': 'red', 'rgb(77, 163, 255)': 'blue', 'rgb(255, 210, 63)': 'yellow', 'rgb(61, 220, 132)': 'green' };
