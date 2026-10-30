@@ -71,6 +71,8 @@ throws(() => G.play(room, q, 'nope', right(r2.game, r2.data), seq()), /바뀌었
 G.pause(room);
 throws(() => G.play(room, q, t.id, right(r2.game, r2.data)), /완료할 수 없습니다/, '일시 정지 중 완료 거부');
 G.unpause(room);
+G.play(room, q, t.id, right(r2.game, r2.data), seq() - 2);
+ok(t.done, '진행자가 일시 정지했다 풀어도 하던 미니게임은 그대로 완료됨');
 const m = G.list(room).find(x => x.role === 'mafia');
 const before = G.progress(room).done;
 const mt = m.tasks[0], ml = room.locations.find(l => l.id === mt.loc);
