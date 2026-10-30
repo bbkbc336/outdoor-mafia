@@ -70,43 +70,69 @@ async function playGame(page) {
     throw new Error(`${page.label} 미니게임 화면 안 열림: ` + JSON.stringify(await page.evaluate(() => ({ url: location.href, ev: (window.__ev || []).slice(-15), toast: (document.querySelector('.toast') || {}).textContent, modal: (document.querySelector('.modal') || {}).innerText, scanner: !!document.querySelector('#scanner'), task: S.view && S.view.me.task }))));
   }
   const title = await g.locator('.ghead b').innerText();
-  if (await g.locator('.flame').count()) { for (const f of await g.locator('.flame').all()) await f.tap(); }
-  else if (await g.locator('.sw').count()) { for (const s of await g.locator('.sw').all()) await s.tap(); }
-  else if (await g.locator('.lcd').count()) {
-    const code = (await g.locator('.lcd').innerText()).replace(/\s/g, '');
-    for (const c of code) await g.locator('.keypad button').filter({ hasText: new RegExp(`^${c}$`) }).tap();
+  const won = async () => (await g.locator('.gwin').count()) > 0 || !(await g.count());
+  if (await g.locator('.flame').count()) {
+    // 세 번씩 눌러야 꺼지고, 꺼진 불이 다시 붙기도 합니다.
+    for (let k = 0; k < 80 && !(await won()); k++) {
+      const f = g.locator('.flame:not(.out)').first();
+      if (await f.count()) await f.tap(); else await sleep(300);
+    }
+  } else if (await g.locator('.simon').count()) {
+    const d = (await view(page)).me.task.challenge;
+    for (const [r, n] of d.rounds.entries()) {
+      // 다른 사람이 마지막 임무를 끝내 게임이 끝나면 화면이 닫히므로 그때는 멈춥니다.
+      await page.waitForFunction((want) => !document.querySelector('.game') || ((document.querySelector('.gstep') || {}).textContent || '') === want, `👆 ${r + 1}/${d.rounds.length}`, { timeout: 10000 });
+      if (!(await g.count())) break;
+      for (let k = 0; k < n; k++) await g.locator('.simon .pad').nth(d.seq[k]).tap();
+      await sleep(300);
+    }
+  } else if (await g.locator('.lcd').count()) {
+    for (let door = 0; door < 4 && !(await won()); door++) {
+      const code = (await g.locator('.lcd').innerText()).replace(/\s/g, '');
+      for (const c of code) await g.locator('.keypad button').filter({ hasText: new RegExp(`^${c}$`) }).tap();
+      await sleep(400);
+    }
   } else if (await g.locator('.order').count()) {
-    for (let n = 1; n <= 9; n++) await g.locator('.order button').filter({ hasText: new RegExp(`^${n}$`) }).tap();
+    for (let n = 1; n <= 25; n++) await g.locator('.order button').filter({ hasText: new RegExp(`^${n}$`) }).tap();
   } else if (await g.locator('canvas').count()) {
-    const b = await g.locator('canvas').boundingBox();
-    for (let pass = 0; pass < 3 && await g.locator('canvas').count() && !(await g.locator('.gwin').count()); pass++) {
-      for (let y = b.y + 10; y < b.y + b.height; y += 28) {
-        if (await g.locator('.gwin').count() || !(await g.locator('canvas').count())) break; // 다 닦이면 멈춤
-        await touchDrag(page, [b.x + 4, y], [b.x + b.width - 4, y], 6);
+    for (let pass = 0; pass < 15 && !(await won()); pass++) {
+      const b = await g.locator('canvas').boundingBox();
+      if (!b) { await sleep(300); continue; }
+      for (let y = b.y + 10; y < b.y + b.height; y += 36) {
+        if (await won()) break;
+        // 둥근 렌즈라 가운데에서 시작해 양쪽 끝까지 문지릅니다.
+        const cx = b.x + b.width / 2;
+        await touchDrag(page, [cx, y], [b.x + 4, y], 4);
+        await touchDrag(page, [cx, y], [b.x + b.width - 4, y], 4);
       }
+      await sleep(500); // 다음 렌즈로 넘어가는 시간
     }
   } else if (await g.locator('.crate').count()) {
-    const NAME = { 'rgb(255, 77, 94)': 'red', 'rgb(77, 163, 255)': 'blue', 'rgb(255, 210, 63)': 'yellow' };
-    for (let i = 0; i < 6 && await g.locator('.crate').count(); i++) {
+    const NAME = { 'rgb(255, 77, 94)': 'red', 'rgb(77, 163, 255)': 'blue', 'rgb(255, 210, 63)': 'yellow', 'rgb(61, 220, 132)': 'green' };
+    for (let i = 0; i < 16 && await g.locator('.crate').count(); i++) {
       const crate = g.locator('.crate');
       const color = NAME[await crate.evaluate(e => getComputedStyle(e).backgroundColor)];
       await touchDrag(page, await center(crate), await center(g.locator(`.bin[data-color="${color}"]`)));
       await sleep(150);
     }
   } else if (await g.locator('.track').count()) {
-    for (const t of await g.locator('.track').all()) {
-      const tb = await t.boundingBox(), lb = await t.locator('.target').boundingBox();
-      await touchDrag(page, [tb.x + tb.width / 2, tb.y + tb.height - 8], [tb.x + tb.width / 2, lb.y + 2]);
+    for (let r = 0; r < 3 && !(await won()); r++) {
+      for (const t of await g.locator('.track').all()) {
+        const tb = await t.boundingBox(), lb = await t.locator('.target').boundingBox();
+        await touchDrag(page, [tb.x + tb.width / 2, tb.y + tb.height - 8], [tb.x + tb.width / 2, lb.y + 2]);
+      }
+      await sleep(600);
     }
   } else if (await g.locator('.piece').count()) {
-    for (let i = 0; i < 3 && await g.locator('.piece').count(); i++) {
+    for (let i = 0; i < 20 && !(await won()); i++) {
       const p = g.locator('.piece').first();
+      if (!(await p.count())) { await sleep(300); continue; }
       const shape = await p.getAttribute('data-shape');
-      await touchDrag(page, await center(p), await center(g.locator(`.hole[data-shape="${shape}"]`)));
+      await touchDrag(page, await center(p), await center(g.locator(`.hole[data-shape="${shape}"]:not(.full)`)));
       await sleep(150);
     }
   }
-  if (!(await g.waitFor({ state: 'detached', timeout: 8000 }).then(() => true, () => false))) {
+  if (!(await g.waitFor({ state: 'detached', timeout: 20000 }).then(() => true, () => false))) {
     await page.screenshot({ path: path.join(OUT, `fail-unsolved-${page.label}.png`) });
     throw new Error(`${page.label} ${title} 못 끝냄: ` + JSON.stringify(await page.evaluate(() => {
       const g = document.querySelector('.game');

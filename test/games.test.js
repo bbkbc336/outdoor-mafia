@@ -11,14 +11,14 @@ let clock = Date.now();
 Date.now = () => clock;
 
 const right = (game, d) => ({
-  fire: { out: d.spots && d.spots.length }, power: { on: d.n }, lock: { code: d.code },
-  order: { seq: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, lens: { clean: 0.9 }, sort: { bins: d.boxes },
-  level: { values: (d.targets || []).map(t => t + 3) }, shape: { placed: d.holes },
+  fire: { out: d.spots && d.spots.length }, power: { seq: d.seq }, lock: { codes: d.codes },
+  order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: Array(d.n).fill(0.9) }, sort: { bins: d.boxes },
+  level: { values: (d.targets || []).map(t => t + 3) }, shape: { placed: (d.rounds || []).map(x => x.holes) },
 }[game]);
 const wrong = (game, d) => ({
-  fire: { out: 3 }, power: { on: 2 }, lock: { code: d.code === '0000' ? '1111' : '0000' },
-  order: { seq: [2, 1, 3, 4, 5, 6, 7, 8, 9] }, lens: { clean: 0.3 }, sort: { bins: (d.boxes || []).map(c => (c === 'red' ? 'blue' : 'red')) },
-  level: { values: (d.targets || []).map(t => t + 30) }, shape: { placed: ['circle', 'circle'] },
+  fire: { out: 3 }, power: { seq: (d.seq || []).map(x => (x + 1) % 4) }, lock: { codes: (d.codes || []).slice(0, 3) },
+  order: { seq: [2, 1, ...[...Array(23)].map((_, i) => i + 3)] }, lens: { clean: [0.9, 0.9, 0.3] }, sort: { bins: (d.boxes || []).map(c => (c === 'red' ? 'blue' : 'red')) },
+  level: { values: (d.targets || []).map(t => t + 30) }, shape: { placed: (d.rounds || []).map(x => x.holes).slice(0, 2) },
 }[game]);
 
 const room = G.createRoom(new Set());
@@ -41,12 +41,13 @@ for (let i = 0; i < 8; i++) {
   ok(r.kind === 'game' && r.taskId === t.id && r.data, `${r.name}: QR을 찍으면 문제가 나옴`);
   if (r.game === 'lock') ok(!JSON.stringify(G.playerView(room, p).roster).includes(r.data.code), '잠금 번호가 다른 정보에 섞이지 않음');
   throws(() => G.play(room, p, t.id, right(r.game, r.data), seq()), /완료되지 않았습니다/, `${r.name}: 너무 빨리 끝내면 거부`);
-  clock += 3000;
+  clock += 9000;
   throws(() => G.play(room, p, t.id, wrong(r.game, r.data), seq()), /완료되지 않았습니다/, `${r.name}: 틀린 결과 거부`);
   const res = G.play(room, p, t.id, right(r.game, r.data), seq());
   ok(res.kind === 'done' && t.done, `${r.name}: 맞게 끝내면 임무 완료`);
 }
 ok(seen.size === 8, '8종 모두 시험');
+ok(G.GAME_KINDS.every(k => G.GAMES[k].min >= 8000), '모든 게임은 8초 안에 끝낼 수 없음 (한 판 약 20초 분량)');
 
 console.log('\n[진행 상황]');
 G.newGame(room);
@@ -63,10 +64,10 @@ throws(() => G.scan(room, q, wrongLoc.code, seq()), /임무 장소가 아닙니�
 const loc = room.locations.find(l => l.id === t.loc);
 G.scan(room, q, loc.code, seq());
 ok(G.playerView(room, q).me.task.challenge, '화면을 닫아도 이어서 할 수 있게 문제 유지');
-clock += 3000;
+clock += 9000;
 const r2 = G.scan(room, q, loc.code, seq());
 throws(() => G.play(room, q, t.id, right(r2.game, r2.data), seq()), /완료되지 않았습니다/, '다시 찍으면 새 문제로 처음부터 (시간도 다시)');
-clock += 3000;
+clock += 9000;
 throws(() => G.play(room, q, 'nope', right(r2.game, r2.data), seq()), /바뀌었습니다/, '다른 임무 번호 거부');
 G.pause(room);
 throws(() => G.play(room, q, t.id, right(r2.game, r2.data)), /완료할 수 없습니다/, '일시 정지 중 완료 거부');
@@ -76,7 +77,7 @@ ok(t.done, '진행자가 일시 정지했다 풀어도 하던 미니게임은 �
 const m = G.list(room).find(x => x.role === 'mafia');
 const before = G.progress(room).done;
 const mt = m.tasks[0], ml = room.locations.find(l => l.id === mt.loc);
-const mr = G.scan(room, m, ml.code, seq()); clock += 3000;
+const mr = G.scan(room, m, ml.code, seq()); clock += 9000;
 G.play(room, m, mt.id, right(mr.game, mr.data), seq());
 ok(mt.done && G.progress(room).done === before, '마피아도 같은 게임을 하지만 진행률에는 반영 안 됨');
 
