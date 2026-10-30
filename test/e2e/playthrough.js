@@ -132,11 +132,14 @@ async function playGame(page) {
     const send = (type, x, y) => page.cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
     for (const t of await g.locator('.track').all()) {
       if (await won()) break;
-      const tb = await t.boundingBox();
+      const tb = await t.boundingBox({ timeout: 1000 }).catch(() => null);
+      if (!tb) break;
       const x = tb.x + tb.width / 2;
       await send('touchStart', x, tb.y + tb.height - 8);
-      for (let i = 0; i < 120 && !(await t.evaluate(e => e.classList.contains('locked'))); i++) {
-        const lb = await t.locator('.target').boundingBox();
+      for (let i = 0; i < 120; i++) {
+        if (await won() || await t.evaluate(e => e.classList.contains('locked'), null, { timeout: 1000 }).catch(() => true)) break;
+        const lb = await t.locator('.target').boundingBox({ timeout: 1000 }).catch(() => null);
+        if (!lb) break;
         await send('touchMove', x, lb.y + 2);
         await sleep(50);
       }
