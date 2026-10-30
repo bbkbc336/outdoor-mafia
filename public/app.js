@@ -122,6 +122,8 @@ function onChange(prev, v) {
     // 단계가 바뀌면 열려 있던 선택 창은 닫습니다(오래된 선택 방지).
     closeModal(); closeModal('confirm');
   }
+  // 활동이 멈추면(회의·정지·사망) 하던 미니게임도 닫습니다. 다시 QR을 찍으면 새로 시작합니다.
+  if (v.phase !== 'active' || v.paused || v.me.status === 'dead') Games.close();
   if (prev.phase !== v.phase) {
     if (v.phase !== 'active') Scanner.close();
     if (v.phase === 'gathering') { vib([300, 100, 300, 100, 300]); S.secretOpen = false; }
@@ -157,7 +159,15 @@ async function handleScan(value) {
       report: async () => { closeModal(); const x = await act('report', { qr: value }); if (x) toast('신고했습니다. 집결 장소로 모이세요!', 'good'); },
     });
   } else if (r.kind === 'question') toast('표지를 보고 아래에서 답을 고르세요.', '', 3000);
+  else if (r.kind === 'game') openGame(r.taskId, r.game, r.data);
   else toast(r.message || '확인했습니다.', '', 3000);
+}
+
+function openGame(taskId, game, data) {
+  Games.open({ game, data }, async (result) => {
+    const x = await act('play', { taskId, result });
+    if (x && x.message) toast('✅ ' + x.message, 'good', 3000);
+  });
 }
 
 function openScan() { Scanner.open('장소 QR 또는 쓰러진 사람의 이름표', handleScan); }
@@ -301,13 +311,15 @@ function taskCard(v) {
   if (t.type === 'report') how = t.step === 1 && t.options
     ? `<b>${esc(t.question)}</b>`
     : `<b>${esc(t.loc)}</b>에 가서 QR을 찍고 표지를 확인하세요.`;
-  const label = t.title ? esc(t.title) : { visit: '방문 점검', carry: '물품 운반', report: '현장 보고' }[t.type];
+  if (t.type === 'game') how = `<b>${esc(t.loc)}</b>에 가서 QR을 찍으세요.`;
+  const label = t.title ? esc(t.title) : t.type === 'game' ? esc(t.gameName) : { visit: '방문 점검', carry: '물품 운반', report: '현장 보고' }[t.type];
   return `<div class="card hl">
     <div class="row"><h3 style="margin:0">임무 ${t.index} / ${t.total} · ${label}</h3></div>
     <p style="font-size:20px;margin-top:8px">📍 ${how}</p>
     ${t.desc ? `<p class="small" style="color:var(--accent)">${esc(t.desc)}</p>` : ''}
     ${t.type === 'report' && t.step === 1 && t.options ? t.options.map(o => `<button class="choice" data-a="answer" data-task="${esc(t.id)}" data-opt="${esc(o)}" data-needs-online>${esc(o)}</button>`).join('') : ''}
     ${t.type === 'carry' && t.step === 1 ? '<p class="small muted">출발지 확인 완료 ✔</p>' : ''}
+    ${t.type === 'game' && t.challenge ? '<button class="primary" data-a="resumeGame" data-needs-online style="margin-top:10px">▶ 이어서 하기</button>' : ''}
   </div>`;
 }
 
@@ -441,6 +453,7 @@ app.addEventListener('click', (e) => {
   if (a === 'kill') return openKill();
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
+  if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge); }
   if (a === 'answer') return act('answer', { taskId: b.dataset.task, option: b.dataset.opt }).then(r => { if (r && r.message) toast('✅ ' + r.message, 'good', 3000); });
 });
 window.addEventListener('rerender', () => render());

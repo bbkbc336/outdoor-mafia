@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "test": "node test/rules.test.js && node test/missions.test.js",
+    "test": "node test/rules.test.js && node test/missions.test.js && node test/games.test.js",
     "test:redis": "node -e \"process.env.TEST_REDIS=1;require('./test/rules.test.js')\""
   },
   "engines": { "node": ">=18" }

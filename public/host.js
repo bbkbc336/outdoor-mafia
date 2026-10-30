@@ -252,7 +252,7 @@ function tabPlaces(v) {
     <p class="small muted">운반 임무는 '물품 출발지'에서 다른 장소의 '도착 상자'로 갑니다. 출발지와 상자가 모두 있어야 배정됩니다.</p>`}`;
 }
 
-const MTYPE = { visit: '방문 점검', report: '현장 보고', carry: '물품 운반' };
+const MTYPE = { game: '미니게임', visit: '방문 점검 (QR만)', report: '현장 보고 (표지 필요)', carry: '물품 운반 (물건 필요)' };
 function tabMissions(v) {
   const locked = v.phase !== 'lobby';
   if (!H.misDraft || locked) H.misDraft = JSON.parse(JSON.stringify(v.missions));
@@ -262,7 +262,7 @@ function tabMissions(v) {
   const head = d.length
     ? `<p>등록된 임무 <b>${d.length}개</b> 중에서 한 사람에게 <b>${Math.min(per, d.length)}개</b>씩, 사람마다 다른 순서로 배정합니다.</p>
        ${d.length < per ? `<p style="color:var(--warn)">1인당 임무 수(${per}개)보다 목록이 적어 ${d.length}개씩만 배정됩니다.</p>` : ''}`
-    : '<p>임무 목록이 비어 있어 <b>장소 정보로 자동 배정</b>합니다. 직접 정하려면 임무를 추가하거나 아래 버튼으로 기본 임무를 채운 뒤 고치세요.</p>';
+    : '<p>임무 목록이 비어 있어 <b>장소마다 미니게임을 무작위로 배정</b>합니다. 장소에는 QR만 두면 됩니다. 직접 정하려면 임무를 추가하세요.</p>';
   return `${locked ? '<div class="card">임무는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div class="card">${head}<p class="small muted">장소를 먼저 장소·QR 탭에서 저장해야 여기에서 고를 수 있습니다.</p></div>
     <div id="missions">${d.map((m, i) => `<div class="locedit" data-mi="${i}">
@@ -272,13 +272,14 @@ function tabMissions(v) {
       <input data-m="title" value="${esc(m.title || '')}" placeholder="임무 이름 (선택, 예: 소화기 점검)" ${dis} style="margin-top:8px">
       <label>${m.type === 'carry' ? '출발 장소' : '장소'}</label><select data-m="loc" ${dis}>${locOpts(m.loc)}</select>
       ${m.type === 'carry' ? `<label>도착 장소</label><select data-m="loc2" ${dis}>${locOpts(m.loc2)}</select>` : ''}
+      ${m.type === 'game' ? `<label>게임</label><select data-m="game" ${dis}><option value="random">🎲 무작위 (사람마다 다름)</option>${Object.entries(GAME_NAME).map(([k, n]) => `<option value="${k}" ${m.game === k ? 'selected' : ''}>${n}</option>`).join('')}</select>` : ''}
       <input data-m="desc" value="${esc(m.desc || '')}" placeholder="참가자에게 보일 안내 (선택, 예: 빨간 공 하나를 옮기세요)" ${dis} style="margin-top:8px">
       ${m.type === 'report' ? `<input data-m="q" value="${esc((m.q && m.q.question) || '')}" placeholder="질문 (예: 표지판의 그림은?)" ${dis} style="margin-top:8px">
         <input data-m="opts" value="${esc(((m.q && m.q.options) || []).join(', '))}" placeholder="선택지 (쉼표로 구분)" ${dis} style="margin-top:8px">
         <input data-m="ans" value="${esc((m.q && m.q.answer) || '')}" placeholder="정답 (선택지 중 하나)" ${dis} style="margin-top:8px">` : ''}
     </div>`).join('')}</div>
     ${locked ? '' : `<div class="btns"><button data-mis="add">+ 임무 추가</button>
-      <button data-mis="fill">장소 정보로 기본 임무 채우기</button>
+      <button data-mis="fill">장소마다 미니게임 채우기</button>
       <button class="primary" data-mis="save">임무 저장</button>
       ${d.length ? '<button class="ghostbtn" data-mis="clear">목록 비우기 (자동 배정으로)</button>' : ''}</div>
       <p class="small muted">현장 보고 임무의 정답은 QR 인쇄 페이지의 정답표에도 나옵니다. 저장하지 않고 다른 탭으로 가면 고친 내용이 사라집니다.</p>`}`;
@@ -289,17 +290,15 @@ function syncMisDraft() {
     const g = (f) => el.querySelector(`[data-m="${f}"]`);
     m.type = g('type').value; m.title = g('title').value; m.loc = g('loc').value; m.desc = g('desc').value;
     if (g('loc2')) m.loc2 = g('loc2').value;
+    if (g('game')) m.game = g('game').value;
     if (g('q')) m.q = { question: g('q').value, options: g('opts').value.split(',').map(x => x.trim()).filter(Boolean), answer: g('ans').value.trim() };
   });
 }
 function defaultMissions(v) {
   const out = [];
-  for (const l of v.locations) {
-    out.push({ type: 'visit', loc: l.id, title: '', desc: '' });
-    if (l.sign) out.push({ type: 'report', loc: l.id, title: '', desc: '', q: JSON.parse(JSON.stringify(l.sign)) });
-    const dest = l.item && v.locations.find(b => b.box && b.id !== l.id);
-    if (dest) out.push({ type: 'carry', loc: l.id, loc2: dest.id, title: '', desc: '' });
-  }
+  // 장소마다 미니게임 하나씩, 8종을 돌아가며 배치
+  const kinds = Object.keys(GAME_NAME);
+  v.locations.forEach((l, i) => out.push({ type: 'game', loc: l.id, game: kinds[i % kinds.length], title: '', desc: '' }));
   return out;
 }
 function renderKeepMis() { const d = H.misDraft; render(); H.misDraft = d; }
@@ -376,10 +375,10 @@ app.addEventListener('click', async (e) => {
   if (mis) {
     syncMisDraft();
     const a = mis.dataset.mis;
-    if (a === 'add') { H.misDraft.push({ type: 'visit', loc: '', title: '', desc: '' }); return renderKeepMis(); }
+    if (a === 'add') { H.misDraft.push({ type: 'game', game: 'random', loc: '', title: '', desc: '' }); return renderKeepMis(); }
     if (a === 'del') { H.misDraft.splice(Number(mis.dataset.i), 1); return renderKeepMis(); }
     if (a === 'fill') {
-      if (H.misDraft.length && !(await confirmBox('기본 임무로 채울까요?', '지금 목록 뒤에 장소마다 기본 임무가 추가됩니다.', '채우기'))) return;
+      if (H.misDraft.length && !(await confirmBox('기본 임무로 채울까요?', '지금 목록 뒤에 장소마다 미니게임이 하나씩 추가됩니다.', '채우기'))) return;
       H.misDraft = H.misDraft.concat(defaultMissions(H.view)); return renderKeepMis();
     }
     if (a === 'clear') {

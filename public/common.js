@@ -129,3 +129,7 @@ const PHASE_NAME = {
   discussion: '토론', voting: '투표', result: '투표 결과', ended: '게임 종료',
 };
 const ROLE_NAME = { mafia: '마피아', citizen: '시민' };
+const GAME_NAME = {
+  fire: '🔥 화재 진압', power: '🔌 전원 복구', lock: '🔐 문 잠금 해제', order: '🔢 순서 점검',
+  lens: '🧽 렌즈 닦기', sort: '📦 화물 분류', level: '⚡ 출력 조정', shape: '🧩 부품 끼우기',
+};

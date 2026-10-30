@@ -36,9 +36,19 @@ function listen(code, token) {
   return c;
 }
 
+// 서버가 낸 미니게임 문제의 정답 (휴대폰 화면에서 끝까지 했을 때 보내는 값)
+function solveGame(r) {
+  const d = r.data;
+  return {
+    fire: { out: d.spots && d.spots.length }, power: { on: d.n }, lock: { code: d.code },
+    order: { seq: [1, 2, 3, 4, 5, 6, 7, 8, 9] }, lens: { clean: 0.95 }, sort: { bins: d.boxes },
+    level: { values: d.targets }, shape: { placed: d.holes },
+  }[r.game];
+}
+
 async function main() {
   // TEST_REDIS=1 이면 가짜 Upstash 서버를 띄워 Redis 저장 방식(Vercel과 같은 경로)으로 시험합니다.
-  const ENV = { ...process.env, PORT, DATA_DIR: DATA };
+  const ENV = { ...process.env, PORT, DATA_DIR: DATA, GAME_FAST: '1' }; // 미니게임 최소 시간 없이
   delete ENV.KV_REST_API_URL; delete ENV.UPSTASH_REDIS_REST_URL;
   if (process.env.TEST_REDIS) {
     const kvPort = PORT + 100;
@@ -194,6 +204,10 @@ async function main() {
       const t = v.me.task;
       if (!t) return null;
       if (t.type === 'visit') return act(n, 'scan', { value: locByName(t.loc).code });
+      if (t.type === 'game') {
+        const s = await act(n, 'scan', { value: locByName(t.loc).code });
+        return act(n, 'play', { taskId: t.id, result: solveGame(s.result) });
+      }
       if (t.type === 'carry') {
         await act(n, 'scan', { value: locByName(t.loc).code });
         return act(n, 'scan', { value: locByName(t.loc2).code });
