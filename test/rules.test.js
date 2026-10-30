@@ -70,6 +70,17 @@ async function main() {
     const dup = await post('/api/join', { code, name: '가은' });
     ok(dup.name === '가은 (2)', '같은 이름은 번호를 붙여 구분');
     await host('kick', { pid: (await post('/api/state', { code, token: dup.token })).view.me.id });
+    console.log('\n[1-1] 번호 이름표 연결');
+    const claim = await post('/api/act', { code, token: P['가은'].token, action: 'scan', value: 'https://x.test/?s=P07' });
+    ok(claim.status === 200 && claim.result.kind === 'claimed' && claim.view.me.tag === 7, '대기 중 목걸이 QR(주소)을 찍으면 이름표 연결');
+    const taken = await post('/api/act', { code, token: P['나래'].token, action: 'scan', value: 'P7' });
+    ok(taken.status === 400 && /이미/.test(taken.error), '다른 사람이 쓰는 번호는 거부 (P7 = P07)');
+    ok((await host('assign')).status === 400, '이름표가 없는 사람이 있으면 역할 배정 거부');
+    await host('assignTags');
+    const tagged = (await post('/api/state', { code, token: H })).view.players;
+    ok(tagged.every(p => p.tag) && new Set(tagged.map(p => p.tag)).size === tagged.length && tagged.find(p => p.name === '가은').tag === 7, '남은 번호 자동 배정 (겹치지 않고, 직접 연결한 번호 유지)');
+    const placeInfo = await post('/api/act', { code, token: P['나래'].token, action: 'scan', value: 'L02' });
+    ok(placeInfo.status === 200 && placeInfo.result.kind === 'info', '대기 중 장소 QR은 안내만');
     const steal = await post('/api/state', { code, token: 'guess' });
     ok(steal.status === 400, '이름이나 추측 토큰으로 남의 계정에 접근 불가');
 

@@ -23,6 +23,7 @@ const wrong = (game, d) => ({
 
 const room = G.createRoom(new Set());
 ['가', '나', '다', '라'].forEach(n => G.join(room, n));
+G.assignTags(room);
 G.updateSettings(room, { mafiaCount: 1, tasksPerPlayer: 8, startProtect: 0 });
 const L = room.locations[0];
 G.saveMissions(room, G.GAME_KINDS.map(k => ({ type: 'game', game: k, loc: L.id })));

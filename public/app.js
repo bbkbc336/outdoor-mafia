@@ -113,7 +113,8 @@ function connect() {
 // ───────────── 상태 변화 반응 ─────────────
 function onChange(prev, v) {
   if (!prev) {
-    if (S.pendingScan && v.phase !== 'lobby') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan(s), 300); }
+    // 휴대폰 카메라로 QR(주소)을 열고 들어온 경우: 대기 중이면 이름표 연결, 게임 중이면 임무·신고
+    if (S.pendingScan && v.phase !== 'briefing') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan(s), 300); }
     else S.pendingScan = null;
     return;
   }
@@ -150,7 +151,7 @@ async function act(action, extra = {}) {
 async function handleScan(value) {
   const r = await act('scan', { value });
   if (!r) return;
-  if (r.kind === 'done') toast('✅ ' + r.message, 'good', 3000);
+  if (r.kind === 'done' || r.kind === 'claimed') toast('✅ ' + r.message, 'good', 3000);
   else if (r.kind === 'body') {
     if (!r.canReport) return toast(r.message, '', 3000);
     openModal(`<div class="center"><div class="emoji">🚨</div><h2>${esc(r.name)} 님이 쓰러져 있습니다</h2>
@@ -198,7 +199,7 @@ function openGame(taskId, game, data) {
   });
 }
 
-function openScan() { Scanner.open('장소 QR 또는 쓰러진 사람의 이름표', handleScan); }
+function openScan() { Scanner.open(S.view && S.view.phase === 'lobby' ? '내 목걸이 이름표 QR' : '장소 QR 또는 쓰러진 사람의 이름표', handleScan); }
 
 function openKill() {
   const v = S.view, m = v.mafia;
@@ -278,6 +279,10 @@ function viewLobby(v) {
       <p class="muted small">진행자가 역할을 배정할 때까지 기다리세요.</p>
       <button class="${v.me.ready ? 'good' : 'primary'}" data-a="ready" data-needs-online style="margin-top:12px">${v.me.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료 누르기'}</button>
     </div>
+    ${v.me.tag
+      ? `<div class="card good center"><h3>내 이름표</h3><div class="big">🏷 ${String(v.me.tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 목걸이를 차세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
+      : `<div class="card hl center"><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표의 QR을 찍으세요.</p>
+          <button class="primary" data-a="scan" data-needs-online>📷 내 이름표 QR 찍기</button></div>`}
     <div class="card">
       <h3>복구 코드</h3>
       <p><span class="kbd" style="font-size:24px">${esc(v.me.recovery)}</span></p>
@@ -285,7 +290,7 @@ function viewLobby(v) {
     </div>
     <div class="card">
       <h3>입장한 사람 ${v.roster.length}명</h3>
-      <ul class="list">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.ready ? '<span class="chip alive">준비</span>' : ''}</li>`).join('')}</ul>
+      <ul class="list">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="chip alive">준비</span>' : ''}</li>`).join('')}</ul>
     </div>
     ${rulesCard()}`;
 }
@@ -501,4 +506,8 @@ setInterval(() => {
 
 // ───────────── 시작 ─────────────
 if (S.code && S.token) connect();
-else renderHome();
+else {
+  if (S.pendingScan) S.notice = '먼저 진행자가 보여 주는 입장 QR로 방에 들어온 뒤, 이 QR을 다시 찍으세요.';
+  S.pendingScan = null;
+  renderHome();
+}

@@ -7,6 +7,7 @@ const throws = (fn, re, m) => { try { fn(); ok(false, m); } catch (e) { ok(e ins
 
 const room = G.createRoom(new Set());
 ['가', '나', '다', '라', '마', '바'].forEach(n => G.join(room, n));
+G.assignTags(room);
 G.updateSettings(room, { mafiaCount: 1, tasksPerPlayer: 3, startProtect: 0 });
 const [L1, L2, L3] = room.locations;
 

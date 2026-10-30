@@ -120,6 +120,7 @@ function tabRun(v) {
   if (v.phase === 'lobby') {
     const m = v.settings.mafiaCount, n = k.total;
     const okSetup = n >= 3 && m < n - m;
+    const noTag = v.players.filter(p => !p.tag);
     main = `<div class="card hl center">
         <div class="phase">입장 받는 중</div>
         <div class="big" style="font-size:44px;letter-spacing:6px">${esc(v.code)}</div>
@@ -130,8 +131,11 @@ function tabRun(v) {
       <div class="grid2"><div class="stat"><b>${n}</b>입장</div><div class="stat"><b>${v.players.filter(p => p.ready).length}</b>준비</div></div>
       <div class="card"><p>배정 예정: 마피아 <b>${m}</b>명 · 시민 <b>${Math.max(0, n - m)}</b>명 <button class="sm" data-tab="settings">변경</button></p>
         ${okSetup ? '' : `<p style="color:var(--warn)">${n < 3 ? '최소 3명이 필요합니다.' : '마피아는 시민보다 적어야 합니다.'}</p>`}
-        <button class="primary" data-run="assign" ${okSetup ? '' : 'disabled'}>역할 무작위 배정</button>
-        <p class="small muted">배정 전에 장소 QR과 이름표 QR을 출력해 두세요 (장소·QR 탭).</p>
+        ${noTag.length ? `<p style="color:var(--warn)">🏷 이름표 미연결 ${noTag.length}명: ${noTag.map(p => esc(p.name)).join(', ')}</p>
+          <button data-run="assignTags" style="margin-bottom:10px">남은 번호 자동 배정</button>
+          <p class="small muted">자동 배정 후 참가자 화면에 뜬 번호의 목걸이를 나눠 주세요.</p>` : (n ? '<p style="color:var(--good)">🏷 모두 이름표 연결 완료</p>' : '')}
+        <button class="primary" data-run="assign" ${okSetup && !noTag.length ? '' : 'disabled'}>역할 무작위 배정</button>
+        <p class="small muted">참가자는 입장한 뒤 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p>
       </div>`;
   } else if (v.phase === 'briefing') {
     const acked = v.players.filter(p => p.ack).length;
@@ -200,9 +204,9 @@ function tabPlayers(v) {
       <b style="flex:1">${esc(p.name)}</b>
       ${p.role ? `<span class="chip ${p.role}" style="flex:0">${ROLE_NAME[p.role]}</span>` : ''}
       ${v.phase !== 'lobby' ? `<span class="chip ${p.status === 'alive' ? 'alive' : 'dead'}" style="flex:0">${STATUS_NAME[p.status]}</span>` : p.ready ? '<span class="chip alive" style="flex:0">준비</span>' : ''}</div>
-      <div class="small muted">복구 코드 <span class="kbd">${esc(p.recovery)}</span> · 이름표 코드 <span class="kbd">${esc(p.code)}</span> ${task ? '· 임무 ' + task : ''}</div>
+      <div class="small muted">복구 코드 <span class="kbd">${esc(p.recovery)}</span> · 이름표 ${p.tag ? `<span class="kbd">${String(p.tag).padStart(2, '0')}</span>` : '<b style="color:var(--warn)">미연결</b>'} ${task ? '· 임무 ' + task : ''}</div>
       <div class="acts">
-        ${v.phase === 'lobby' ? `<button class="sm" data-pact="kick" data-id="${p.id}" data-name="${esc(p.name)}">내보내기</button>` : ''}
+        ${v.phase === 'lobby' ? `<button class="sm" data-pact="setTag" data-id="${p.id}" data-name="${esc(p.name)}" data-tag="${p.tag || ''}">이름표 번호</button><button class="sm" data-pact="kick" data-id="${p.id}" data-name="${esc(p.name)}">내보내기</button>` : ''}
         ${fixable && p.status !== 'alive' ? `<button class="sm good" data-pact="revive" data-id="${p.id}" data-name="${esc(p.name)}">생존으로 복구</button>` : ''}
         ${fixable && p.status === 'alive' ? `<button class="sm" data-pact="setDead" data-id="${p.id}" data-name="${esc(p.name)}">사망 처리</button>` : ''}
         ${fixable && p.task ? `<button class="sm" data-pact="completeTask" data-id="${p.id}" data-name="${esc(p.name)}">현재 임무 완료 처리</button>` : ''}
@@ -235,11 +239,15 @@ function tabPlaces(v) {
   return `<div class="card"><h3>QR 출력</h3><div class="btns">
       <a class="btn primary" href="${printBase}&what=all" target="_blank">🖨 전체 출력 (입장·장소·이름표)</a>
       <div class="row"><a class="btn" href="${printBase}&what=places" target="_blank">장소 QR</a><a class="btn" href="${printBase}&what=players" target="_blank">이름표 QR</a></div></div>
-      <p class="small muted">이름표 QR은 참가자가 모두 입장한 뒤 출력하세요. 장소를 바꾸면 다시 출력해야 합니다.</p></div>
+      <p class="small muted">장소 QR은 번호(01, 02…)로 고정이라 이름을 바꿔도 다시 출력할 필요가 없습니다.</p></div>
+    <div class="card"><h3>이름이 정해지기 전에 미리 출력</h3>
+      <p class="small muted">번호만 찍힌 QR입니다. 방 코드가 들어가지 않아 다음 행사에도 그대로 씁니다.</p>
+      <div class="row"><a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank">장소 01~10</a><a class="btn" href="${printBase}&what=blankTags&n=30" target="_blank">이름표 01~30</a></div>
+      <p class="small muted">새 장소는 비어 있는 가장 작은 번호를 받고, 장소를 지워도 다른 장소 번호는 바뀌지 않습니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 이름" ${locked ? 'disabled' : ''} style="flex:3">
-        ${l.code ? `<span class="kbd" style="flex:0">${esc(l.code)}</span>` : ''}
+        ${l.no ? `<span class="kbd" style="flex:0;white-space:nowrap">${String(l.no).padStart(2, '0')}번</span>` : '<span class="small muted" style="flex:0;white-space:nowrap">저장 시 번호</span>'}
         ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0">삭제</button>`}</div>
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>
       <label class="check"><input type="checkbox" data-f="box" ${l.box ? 'checked' : ''} ${locked ? 'disabled' : ''}> 도착 상자 비치</label>
@@ -365,6 +373,11 @@ app.addEventListener('click', async (e) => {
   }
 
   const pact = e.target.closest('[data-pact]');
+  if (pact && pact.dataset.pact === 'setTag') {
+    const t = prompt(`${pact.dataset.name} 님의 이름표 번호 (1~60, 0이면 해제)`, pact.dataset.tag);
+    if (t === null || t.trim() === '') return;
+    return act('setTag', { pid: pact.dataset.id, tag: Number(t) }, '이름표 번호를 바꿨습니다.');
+  }
   if (pact) {
     const a = pact.dataset.pact, label = { kick: '내보내기', revive: '생존으로 복구', setDead: '사망 처리', completeTask: '현재 임무 완료 처리' }[a];
     if (!(await confirmBox(`${pact.dataset.name}: ${label}`, a === 'kick' ? '' : '수정 이력이 기록됩니다.', label, a !== 'revive'))) return;
@@ -395,7 +408,7 @@ app.addEventListener('click', async (e) => {
   const loc = e.target.closest('[data-loc]');
   if (loc) {
     syncLocDraft();
-    if (loc.dataset.loc === 'add') { H.locDraft.push({ name: '', item: false, box: true, sign: null }); return renderKeepDraft(); }
+    if (loc.dataset.loc === 'add') { H.locDraft.push({ name: '', item: false, box: false, sign: null }); return renderKeepDraft(); }
     if (loc.dataset.loc === 'del') { H.locDraft.splice(Number(loc.dataset.i), 1); return renderKeepDraft(); }
     if (loc.dataset.loc === 'save') {
       const r = await act('locations', { locations: H.locDraft });
