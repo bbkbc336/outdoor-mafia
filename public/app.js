@@ -52,6 +52,7 @@ function renderHome(mode = 'join', err = '') {
       </form>
       <button class="ghostbtn" id="toJoin" style="margin-top:10px">처음 입장하기</button>`}
     </div>
+    <p class="center small"><a href="/practice" style="color:var(--accent)">🎮 미니게임 연습하기</a></p>
     <p class="center small muted">진행자이신가요? <a href="/host" style="color:var(--accent)">방 만들기</a></p>
   </main>`;
   const j = $('#joinForm'), r = $('#recForm');
@@ -118,7 +119,7 @@ function onChange(prev, v) {
     else S.pendingScan = null;
     return;
   }
-  const vib = (p) => { if (navigator.vibrate) try { navigator.vibrate(p); } catch (_) { /* 무시 */ } };
+  const vib = buzz;
   if (prev.seq !== v.seq) {
     // 단계가 바뀌면 열려 있던 선택 창은 닫습니다(오래된 선택 방지).
     closeModal(); closeModal('confirm');
@@ -160,7 +161,7 @@ async function handleScan(value) {
       report: () => askPlace(value),
     });
   } else if (r.kind === 'question') toast('표지를 보고 아래에서 답을 고르세요.', '', 3000);
-  else if (r.kind === 'game') openGame(r.taskId, r.game, r.data);
+  else if (r.kind === 'game') openGame(r.taskId, r.game, r.data, r.readyAt);
   else toast(r.message || '확인했습니다.', '', 3000);
 }
 
@@ -192,8 +193,11 @@ function meetingAlarm(v) {
   setTimeout(() => el.remove(), 10000);
 }
 
-function openGame(taskId, game, data) {
+function openGame(taskId, game, data, readyAt) {
   Games.open({ game, data }, async (result) => {
+    // 서버가 받는 최소 시간 전이면 잠깐 기다렸다 보냅니다.
+    const wait = (readyAt || 0) - serverNow() + 300;
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
     const x = await act('play', { taskId, result });
     if (x && x.message) toast('✅ ' + x.message, 'good', 3000);
   });
@@ -267,8 +271,24 @@ function render() {
     case 'ended': body = viewEnded(v); break;
     default: body = '<p>알 수 없는 단계</p>';
   }
-  app.innerHTML = `<div class="topbar" id="topbar"></div><div id="banners"></div><main>${body}</main>`;
+  const html = `<div class="topbar" id="topbar"></div><div id="banners"></div><main>${body}</main>`;
+  // 다른 사람이 임무를 끝내 진행률만 바뀐 경우에는 진행률 칸만 고칩니다.
+  // 화면 전체를 다시 그리면 그 순간 누른 버튼이 사라져 탭이 무시되고 스크롤도 튑니다.
+  const PR = /<!--pr-->[\s\S]*?<!--\/pr-->/;
+  const key = html.replace(PR, '');
+  const prog = document.getElementById('prog');
+  if (key === S.lastKey && document.getElementById('topbar')) {
+    const m = html.match(PR);
+    if (prog && m) prog.innerHTML = m[0];
+    renderBars();
+    return;
+  }
+  S.lastKey = key;
+  const y = S.lastPhase === v.phase ? window.scrollY : 0; // 단계가 바뀌면 맨 위부터
+  S.lastPhase = v.phase;
+  app.innerHTML = html;
   renderBars();
+  window.scrollTo(0, y);
 }
 
 function viewLobby(v) {
@@ -292,7 +312,8 @@ function viewLobby(v) {
       <h3>입장한 사람 ${v.roster.length}명</h3>
       <ul class="list">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="chip alive">준비</span>' : ''}</li>`).join('')}</ul>
     </div>
-    ${rulesCard()}`;
+    ${rulesCard()}
+    <p class="center small"><a href="/practice" target="_blank" style="color:var(--accent)">🎮 기다리는 동안 미니게임 연습하기</a></p>`;
 }
 
 function rulesCard() {
@@ -378,11 +399,11 @@ function viewActive(v) {
   return `
     ${ghost ? '<div class="card" style="border-color:#34407a;background:#141a33"><b>👻 유령 상태</b><p class="small muted">말하거나 힌트를 주지 마세요. 임무는 계속 진행률에 반영됩니다(시민).</p></div>' : ''}
     ${taskCard(v)}
-    <div class="card">
+    <div class="card" id="prog"><!--pr-->
       <div class="row"><h3 style="margin:0">공동 임무 진행률</h3><b style="flex:0">${pr.pct}%</b></div>
       <div class="progress" style="margin-top:8px"><div style="width:${Math.min(100, pr.pct)}%"></div></div>
       <p class="small muted">목표 ${pr.goal}% 달성 시 시민 승리</p>
-    </div>
+    <!--/pr--></div>
     ${secretPanel}
     ${roleBlock(v, true)}
     ${!ghost ? `<div class="card">
@@ -493,7 +514,7 @@ app.addEventListener('click', (e) => {
   if (a === 'scanArea') return toast('🔦 주변에 이상한 점이 없습니다.', '', 2500);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
-  if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge); }
+  if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge, t.readyAt); }
   if (a === 'answer') return act('answer', { taskId: b.dataset.task, option: b.dataset.opt }).then(r => { if (r && r.message) toast('✅ ' + r.message, 'good', 3000); });
 });
 window.addEventListener('rerender', () => render());

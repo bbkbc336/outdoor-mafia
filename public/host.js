@@ -89,11 +89,15 @@ function render() {
   if (H.tab === 'missions') body = tabMissions(v);
   if (H.tab === 'log') body = tabLog(v);
   const scrollY = window.scrollY;
-  app.innerHTML = `<div class="topbar" id="topbar"></div>
+  const html = `<div class="topbar" id="topbar"></div>
     ${!H.online ? '<div class="banner off">연결 끊김 — 재연결 중</div>' : ''}
     ${v.paused ? '<div class="banner pause">⏸ 일시 정지 중 — 참가자 행동이 모두 막혀 있습니다</div>' : ''}
     <div class="tabs">${tabs.map(([k, n]) => `<button class="${H.tab === k ? 'on' : ''}" data-tab="${k}">${n}</button>`).join('')}</div>
     <main>${body}</main>`;
+  // 내용이 같으면 다시 그리지 않습니다(누르던 버튼·입력 중인 칸 유지).
+  if (html === H.lastHtml && document.getElementById('topbar')) { renderBars(); return; }
+  H.lastHtml = html;
+  app.innerHTML = html;
   renderBars();
   window.scrollTo(0, scrollY);
 }
@@ -241,6 +245,10 @@ function tabSettings(v) {
 function tabPlaces(v) {
   const locked = v.phase !== 'lobby';
   if (!H.locDraft || locked) H.locDraft = JSON.parse(JSON.stringify(v.locations));
+  // 저장 전 새 장소가 받을 번호(서버와 같은 규칙: 비어 있는 가장 작은 번호)
+  const used = new Set(H.locDraft.filter(l => l.no).map(l => l.no));
+  const nextNo = new Map();
+  for (const l of H.locDraft) if (!l.no) { let n = 1; while (used.has(n)) n++; used.add(n); nextNo.set(l, n); }
   const printBase = `/print?code=${v.code}&token=${encodeURIComponent(H.token)}`;
   return `<div class="card"><h3>QR 출력</h3><div class="btns">
       <a class="btn primary" href="${printBase}&what=all" target="_blank">🖨 전체 출력 (입장·장소·이름표)</a>
@@ -253,7 +261,7 @@ function tabPlaces(v) {
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 이름" ${locked ? 'disabled' : ''} style="flex:3">
-        ${l.no ? `<span class="kbd" style="flex:0;white-space:nowrap">${String(l.no).padStart(2, '0')}번</span>` : '<span class="small muted" style="flex:0;white-space:nowrap">저장 시 번호</span>'}
+        ${l.no ? `<span class="kbd" style="flex:0;white-space:nowrap">QR ${String(l.no).padStart(2, '0')}번</span>` : `<span class="kbd" style="flex:0;white-space:nowrap;border-color:var(--accent);color:var(--accent)">QR ${String(nextNo.get(l)).padStart(2, '0')}번</span>`}
         ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0">삭제</button>`}</div>
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>
       <label class="check"><input type="checkbox" data-f="box" ${l.box ? 'checked' : ''} ${locked ? 'disabled' : ''}> 도착 상자 비치</label>
@@ -292,6 +300,7 @@ function tabMissions(v) {
         <input data-m="opts" value="${esc(((m.q && m.q.options) || []).join(', '))}" placeholder="선택지 (쉼표로 구분)" ${dis} style="margin-top:8px">
         <input data-m="ans" value="${esc((m.q && m.q.answer) || '')}" placeholder="정답 (선택지 중 하나)" ${dis} style="margin-top:8px">` : ''}
     </div>`).join('')}</div>
+    <div class="card small"><a href="/practice" target="_blank" style="color:var(--accent)">🎮 미니게임 8종 미리 해 보기 (연습 페이지)</a></div>
     ${locked ? '' : `<div class="btns"><button data-mis="add">+ 임무 추가</button>
       <button data-mis="fill">장소마다 미니게임 채우기</button>
       <button class="primary" data-mis="save">임무 저장</button>

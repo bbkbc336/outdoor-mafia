@@ -48,13 +48,18 @@ setInterval(() => {
   });
 }, 250);
 
+// 화면을 한 번도 누르지 않은 상태(QR 주소로 막 열림)에서는 브라우저가 진동을 막으므로 시도하지 않습니다.
+function buzz(p) {
+  if (!navigator.vibrate || (navigator.userActivation && !navigator.userActivation.hasBeenActive)) return;
+  try { navigator.vibrate(p); } catch (_) { /* 무시 */ }
+}
 function toast(msg, kind = '', ms = 2600) {
   document.querySelectorAll('.toast').forEach(x => x.remove());
   const t = document.createElement('div');
   t.className = 'toast ' + kind;
   t.textContent = msg;
   document.body.appendChild(t);
-  if (navigator.vibrate && kind) { try { navigator.vibrate(kind === 'bad' ? [80, 60, 80] : 60); } catch (_) { /* 무시 */ } }
+  if (kind) buzz(kind === 'bad' ? [80, 60, 80] : 60);
   setTimeout(() => t.remove(), ms);
 }
 
@@ -133,3 +138,27 @@ const GAME_NAME = {
   fire: '🔥 화재 진압', power: '🔌 전원 복구', lock: '🔐 문 잠금 해제', order: '🔢 순서 점검',
   lens: '🧽 렌즈 닦기', sort: '📦 화물 분류', level: '⚡ 출력 조정', shape: '🧩 부품 끼우기',
 };
+
+// 탭 보정: 손가락으로 버튼을 짧게 눌렀는데 브라우저가 click을 만들지 않는 경우가 있습니다
+// (끌기 미니게임 직후 등). 0.4초 안에 click이 오지 않으면 대신 눌러 줍니다. 미니게임 화면은 제외.
+(() => {
+  let down = null;
+  document.addEventListener('pointerdown', (e) => {
+    down = null;
+    if (e.pointerType !== 'touch' || !e.target.closest) return;
+    const el = e.target.closest('button, a, [data-a], [data-run], [data-tab], [data-act]');
+    if (!el || el.closest('.game')) return;
+    down = { el, x: e.clientX, y: e.clientY, t: Date.now() };
+  }, true);
+  document.addEventListener('pointerup', (e) => {
+    const d = down; down = null;
+    if (!d || e.pointerType !== 'touch' || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 12 || Date.now() - d.t > 800) return;
+    let clicked = false;
+    const seen = () => { clicked = true; };
+    d.el.addEventListener('click', seen, { capture: true, once: true });
+    setTimeout(() => {
+      d.el.removeEventListener('click', seen, true);
+      if (!clicked && d.el.isConnected && !d.el.disabled) d.el.click();
+    }, 400);
+  }, true);
+})();

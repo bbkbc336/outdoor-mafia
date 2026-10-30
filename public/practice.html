@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<title>미니게임 연습 — 야외 마피아</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="app"><main>
+  <h1>🎮 미니게임 연습</h1>
+  <p class="muted">게임 중 장소 QR을 찍으면 나오는 미니게임입니다. 방에 들어가지 않아도 마음껏 해 볼 수 있고, 기록은 남지 않습니다.</p>
+  <div class="grid2" id="list"></div>
+  <button class="primary" id="rand" style="margin-top:14px">🎲 무작위로 하나</button>
+  <div class="card" id="best" style="margin-top:14px"><h3>이 휴대폰 기록</h3><p class="small muted">아직 없습니다.</p></div>
+  <p class="center small"><a href="/" style="color:var(--accent)">참가자 화면으로</a></p>
+</main></div>
+<script src="/common.js"></script>
+<script src="/games.js"></script>
+<script>
+'use strict';
+// 서버(lib/game.js makeChallenge)와 같은 규칙으로 문제를 만듭니다. 연습이라 결과를 서버로 보내지 않습니다.
+const r = (n) => Math.floor(Math.random() * n);
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = r(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const MAKE = {
+  fire: () => ({ spots: shuffle([...Array(16).keys()]).slice(0, 8).map(i => ({ x: (i % 4) * 22 + 15 + r(6), y: Math.floor(i / 4) * 22 + 15 + r(6) })) }),
+  power: () => ({ n: 6 }),
+  lock: () => ({ code: String(r(10000)).padStart(4, '0') }),
+  order: () => ({ layout: shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]) }),
+  lens: () => ({}),
+  sort: () => ({ boxes: Array.from({ length: 6 }, () => ['red', 'blue', 'yellow'][r(3)]) }),
+  level: () => ({ targets: [0, 1, 2].map(() => 15 + r(71)) }),
+  shape: () => ({ pieces: shuffle(['circle', 'triangle', 'square']), holes: shuffle(['circle', 'triangle', 'square']) }),
+};
+const best = store.get('mafia:practice') || {};
+function drawBest() {
+  const rows = Object.keys(GAME_NAME).filter(k => best[k]).map(k => `<li><span class="name">${GAME_NAME[k]}</span><b>${(best[k] / 1000).toFixed(1)}초</b></li>`);
+  $('#best').innerHTML = '<h3>이 휴대폰 최고 기록</h3>' + (rows.length ? `<ul class="list">${rows.join('')}</ul>` : '<p class="small muted">아직 없습니다.</p>');
+}
+function play(kind) {
+  const t0 = Date.now();
+  Games.open({ game: kind, data: MAKE[kind]() }, () => {
+    const ms = Date.now() - t0 - 700; // 완료 표시(0.7초) 제외
+    const isBest = !best[kind] || ms < best[kind];
+    if (isBest) { best[kind] = ms; store.set('mafia:practice', best); drawBest(); }
+    toast(`✅ ${GAME_NAME[kind]} 완료 · ${(ms / 1000).toFixed(1)}초${isBest ? ' 🏆 최고 기록!' : ''}`, 'good', 3000);
+  });
+}
+$('#list').innerHTML = Object.entries(GAME_NAME).map(([k, n]) => `<button data-g="${k}" style="min-height:84px">${n}</button>`).join('');
+$('#list').addEventListener('click', (e) => { const b = e.target.closest('[data-g]'); if (b) play(b.dataset.g); });
+$('#rand').onclick = () => { const ks = Object.keys(GAME_NAME); play(ks[r(ks.length)]); };
+drawBest();
+</script>
+</body>
+</html>

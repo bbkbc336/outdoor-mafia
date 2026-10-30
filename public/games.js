@@ -14,8 +14,8 @@ const Games = (() => {
     shape: '🧩 같은 모양에 끼우세요',
   };
   const COLOR = { red: '#ff4d5e', blue: '#4da3ff', yellow: '#ffd23f' };
-  const buzz = (p = 20) => { if (navigator.vibrate) try { navigator.vibrate(p); } catch (_) { /* 무시 */ } };
   const shake = (el) => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); buzz([40, 40, 40]); };
+  const tick = () => buzz(20);
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
   let root = null, done = false;
@@ -78,7 +78,7 @@ const Games = (() => {
         b.style.left = p.x + '%'; b.style.top = p.y + '%';
         b.onclick = () => {
           if (b.classList.contains('out')) return;
-          b.classList.add('out'); b.textContent = '💨'; buzz();
+          b.classList.add('out'); b.textContent = '💨'; tick();
           area.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
           if (++out === d.spots.length) win({ out });
         };
@@ -95,7 +95,7 @@ const Games = (() => {
         const b = h('button', 'sw' + (i === 0 ? ' hint' : ''), '<span class="lamp"></span>OFF');
         b.onclick = () => {
           if (b.classList.contains('on')) return;
-          b.classList.add('on'); b.innerHTML = '<span class="lamp"></span>ON'; buzz();
+          b.classList.add('on'); b.innerHTML = '<span class="lamp"></span>ON'; tick();
           grid.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
           if (++on === d.n) win({ on });
         };
@@ -140,7 +140,7 @@ const Games = (() => {
         b.onclick = () => {
           if (b.classList.contains('ok')) return;
           if (n !== next) return shake(b);
-          b.classList.add('ok'); b.classList.remove('hint'); seq.push(n); buzz();
+          b.classList.add('ok'); b.classList.remove('hint'); seq.push(n); tick();
           next++;
           if (next > 9) return win({ seq });
           btns.find(x => x.textContent === String(next)).classList.add('hint');
@@ -215,7 +215,7 @@ const Games = (() => {
       const drop = (c) => {
         if (done || i >= d.boxes.length) return;
         if (c !== d.boxes[i]) return shake(top.firstChild || top);
-        bins.push(c); i++; buzz();
+        bins.push(c); i++; tick();
         const bin = bottom.querySelector(`[data-color="${c}"]`);
         bin.innerHTML = '📦'.repeat(bins.filter(x => x === c).length);
         if (i === d.boxes.length) { drawQueue(); return win({ bins }); }
@@ -241,7 +241,7 @@ const Games = (() => {
         };
         track.addEventListener('pointerdown', (e) => { if (done) return; e.preventDefault(); track.setPointerCapture(e.pointerId); wrap.querySelectorAll('.hint').forEach(x => x.classList.remove('hint')); set(e); track.dragging = true; });
         track.addEventListener('pointermove', (e) => { if (track.dragging && !done) set(e); });
-        const up = () => { track.dragging = false; if (ok(k)) buzz(); if ([0, 1, 2].every(ok)) win({ values: values.slice() }); };
+        const up = () => { track.dragging = false; if (ok(k)) tick(); if ([0, 1, 2].every(ok)) win({ values: values.slice() }); };
         track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
         wrap.appendChild(track);
       });
@@ -262,7 +262,7 @@ const Games = (() => {
       const put = (piece, hole) => {
         if (hole.dataset.shape !== piece.dataset.shape || hole.classList.contains('full')) { picked = null; piece.classList.remove('sel'); return shake(piece); }
         hole.classList.add('full'); hole.innerHTML = shapeSvg(hole.dataset.shape, true);
-        piece.remove(); picked = null; placed.push(hole.dataset.shape); buzz();
+        piece.remove(); picked = null; placed.push(hole.dataset.shape); tick();
         if (placed.length === 3) win({ placed });
       };
       d.pieces.forEach((s, k) => {
