@@ -157,7 +157,7 @@ function tabRun(v) {
         <p>${m.trigger === 'report' ? `🚨 ${esc(m.by)} → ${esc(m.body)} 신고${m.where ? ` (📍 ${esc(m.where)})` : ''}` : m.trigger === 'emergency' ? `📢 ${esc(m.by)} 긴급회의` : '📢 진행자 소집'}</p>
         <p>공개된 탈락자: <b>${(m.revealed || []).map(esc).join(', ') || '없음'}</b></p>
         <p class="small muted">집결 장소: ${esc(m.place)}</p>
-        ${v.phase === 'discussion' ? `<div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}</div>
+        ${v.phaseEndsAt ? `${v.phase === 'gathering' ? '<p class="small muted">시간이 되면 자동으로 토론이 시작됩니다</p>' : ''}<div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}</div>
       <div class="btns">${v.phase === 'gathering'
         ? '<button class="primary" data-run="discussion">모두 모였음 → 토론 시작</button><button data-run="vote">토론 없이 바로 투표</button>'
         : '<button class="primary" data-run="vote">지금 투표 시작</button><button data-run="extend">토론 1분 연장</button>'}</div>`;
@@ -198,7 +198,7 @@ function tabPlayers(v) {
   const fixable = v.paused && v.phase !== 'ended' && v.phase !== 'lobby' && v.phase !== 'briefing';
   return `${!fixable && v.phase !== 'lobby' ? '<p class="small muted">오류 수정 버튼은 일시 정지 중에만 나타납니다.</p>' : ''}
   <table class="ptable">${v.players.map(p => {
-    const task = p.task ? `${p.tasksDone}/${p.tasksTotal} · 현재: ${esc(p.task.loc)}${p.task.type === 'carry' ? '→' + esc(p.task.loc2) : ''}` : (p.tasksTotal ? `${p.tasksDone}/${p.tasksTotal} 완료` : '');
+    const task = p.task ? `${p.tasksDone}/${p.tasksTotal} · 현재: ${esc(p.task.loc)}${p.task.type === 'carry' ? '→' + esc(p.task.loc2) : ''}${p.task.type === 'game' ? ` ${GAME_NAME[p.task.game] || ''}${p.task.step === 1 ? ' (하는 중)' : ''}` : ''}` : (p.tasksTotal ? `${p.tasksDone}/${p.tasksTotal} 완료` : '');
     return `<tr><td>
       <div class="row" style="gap:6px"><span class="dot ${p.online ? '' : 'off'}" style="flex:0 0 12px"></span>
       <b style="flex:1">${esc(p.name)}</b>
@@ -218,7 +218,7 @@ const SETTING_FIELDS = [
   ['mafiaCount', '마피아 수', '명'], ['tasksPerPlayer', '1인당 임무 수', '개'], ['taskGoalPct', '시민 임무 승리 목표', '%'],
   ['killCooldown', '암살 대기시간', '초'], ['startProtect', '시작 직후 암살 보호', '초'], ['resumeProtect', '회의 후 암살 보호', '초'],
   ['emergencyPerPlayer', '긴급회의 1인당 횟수', '회'], ['emergencyCooldown', '긴급회의 대기 (시작·재개 후)', '초'],
-  ['discussionSec', '토론 시간', '초'], ['voteSec', '투표 시간', '초'],
+  ['gatherSec', '회의 집결 제한 (0=직접 시작)', '초'], ['discussionSec', '토론 시간', '초'], ['voteSec', '투표 시간', '초'],
 ];
 function tabSettings(v) {
   const s = v.settings, locked = v.phase !== 'lobby';
@@ -229,7 +229,13 @@ function tabSettings(v) {
     <label class="check"><input type="checkbox" name="revealEjectedRole" ${s.revealEjectedRole ? 'checked' : ''} ${locked ? 'disabled' : ''}> 추방된 사람의 역할 공개</label>
     ${locked ? '' : '<button class="primary" style="margin-top:12px">설정 저장</button>'}
   </form>
-  <div class="card small muted">20명 기준 제안: 마피아 3명, 장소 4~5곳, 1인당 임무 4개. 현장 시험 후 조정하세요.</div>`;
+  <div class="card"><h3>설정 파일</h3>
+    <p class="small muted">설정·장소 이름·임무를 파일로 저장해 두고, 다음 방에서 불러오면 그대로 준비됩니다. 장소 번호도 그대로라 인쇄해 둔 QR을 계속 씁니다.</p>
+    <div class="row"><button data-run="exportSetup">💾 파일로 저장</button>
+      ${locked ? '' : '<button data-run="importSetup">📂 불러오기</button>'}</div>
+    <input type="file" id="setupFile" accept=".json,application/json" style="display:none">
+  </div>
+  <div class="card small muted">기본값은 약 40명·1시간(20~25분짜리 두 판) 기준입니다: 마피아 5명, 1인당 임무 3개, 목표 80%, 암살 대기 60초, 토론 120초, 집결 180초. 현장 시험 후 조정하세요.</div>`;
 }
 
 function tabPlaces(v) {
@@ -369,6 +375,8 @@ app.addEventListener('click', async (e) => {
     if (a === 'meeting' && !(await confirmBox('회의를 강제로 소집할까요?', '지금까지의 사망자가 모두 공개됩니다.', '소집'))) return;
     if (a === 'closeVote' && !(await confirmBox('투표를 지금 마감할까요?', '투표하지 않은 사람은 미투표로 처리됩니다.', '마감'))) return;
     if (a === 'extend') return act('extend', { sec: 60 }, '1분 연장했습니다.');
+    if (a === 'exportSetup') return exportSetup(v);
+    if (a === 'importSetup') return $('#setupFile').click();
     return act(a);
   }
 
@@ -416,7 +424,33 @@ app.addEventListener('click', async (e) => {
     }
   }
 });
-app.addEventListener('change', (e) => {
+// 설정 파일: 임무의 장소는 장소 번호로 저장해 다른 방에서도 맞게 연결합니다.
+function exportSetup(v) {
+  const noOf = (id) => (v.locations.find(l => l.id === id) || {}).no;
+  const setup = {
+    app: 'outdoor-mafia', version: 1, savedAt: new Date().toISOString(),
+    settings: v.settings,
+    locations: v.locations.map(l => ({ no: l.no, name: l.name, sign: l.sign, item: l.item, box: l.box })),
+    missions: v.missions.map(m => ({ type: m.type, game: m.game, title: m.title, desc: m.desc, q: m.q, locNo: noOf(m.loc), loc2No: m.loc2 ? noOf(m.loc2) : undefined })),
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(setup, null, 2)], { type: 'application/json' }));
+  a.download = `야외마피아-설정-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast('설정 파일을 저장했습니다.', 'good');
+}
+app.addEventListener('change', async (e) => {
+  if (e.target.id === 'setupFile') {
+    const file = e.target.files[0]; e.target.value = '';
+    if (!file) return;
+    let setup;
+    try { setup = JSON.parse(await file.text()); } catch (_) { return toast('설정 파일을 읽지 못했습니다.', 'bad'); }
+    if (!(await confirmBox('설정을 불러올까요?', '지금 방의 설정·장소·임무가 파일 내용으로 바뀝니다. 참가자와 이름표는 그대로입니다.', '불러오기'))) return;
+    const r = await act('importSetup', { setup });
+    if (r) { H.locDraft = null; H.misDraft = null; toast(`불러왔습니다 (장소 ${r.result.locations}곳, 임무 ${r.result.missions}개)`, 'good'); render(); }
+    return;
+  }
   if (e.target.matches('[data-m="type"]')) { syncMisDraft(); return renderKeepMis(); }
   if (e.target.matches('[data-f="hasSign"]')) { syncLocDraft(); renderKeepDraft(); }
 });

@@ -426,9 +426,10 @@ function viewMeeting(v) {
     return `<div class="meetingscreen center">
       <div class="emoji">🔔</div><div class="big">회의 소집!</div>
       <p style="font-size:22px;margin-top:10px">집결 장소: <b style="color:var(--accent)">${esc(m.place)}</b></p>
+      ${v.phaseEndsAt ? `<p class="small" style="margin-top:10px">토론 시작까지</p><div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}
     </div>
     ${meetingHead(v)}${ghostNote}
-    <p class="center muted">모두 모이면 진행자가 토론을 시작합니다.</p>
+    <p class="center muted">${v.phaseEndsAt ? '시간이 되면 토론이 시작됩니다. 서둘러 모이세요!' : '모두 모이면 진행자가 토론을 시작합니다.'}</p>
     ${rosterCard(v)}`;
   }
   return `<div class="phase center">토론</div>

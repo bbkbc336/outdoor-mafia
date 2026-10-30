@@ -85,5 +85,34 @@ G.kill(room, m, victim.id, seq());
 G.report(room, q, victim.code, seq(), '<script>없는 장소</script>');
 ok(G.playerView(room, q).meeting.where === null, '장소 목록에 없는 이름은 표시하지 않음');
 
+console.log('\n[회의 집결 제한 시간]');
+ok(room.phase === 'gathering' && room.phaseEndsAt === clock + G.DEFAULT_SETTINGS.gatherSec * 1000, '신고하면 집결 제한 시간이 시작됨');
+clock += G.DEFAULT_SETTINGS.gatherSec * 1000;
+G.tick(room);
+ok(room.phase === 'discussion', '집결 시간이 끝나면 자동으로 토론 시작');
+
+console.log('\n[기본값]');
+const d = G.DEFAULT_SETTINGS;
+ok(d.mafiaCount === 5 && d.tasksPerPlayer === 3 && d.taskGoalPct === 80 && d.killCooldown === 60 && d.discussionSec === 120, '1시간 진행용 기본값');
+
+console.log('\n[설정 파일 불러오기]');
+const fresh = G.createRoom(new Set());
+throws(() => G.importSetup(fresh, { hello: 1 }), /설정 파일이 아닙니다/, '다른 파일은 거부');
+const setup = {
+  app: 'outdoor-mafia', version: 1,
+  settings: { mafiaCount: 2, gatherSec: 0, gatherPlace: '캠프 파이어' },
+  locations: [{ no: 7, name: '샤워장' }, { no: 3, name: '주차장' }],
+  missions: [{ type: 'game', game: 'lock', locNo: 7 }, { type: 'game', game: 'random', locNo: 3 }],
+};
+const res = G.importSetup(fresh, setup);
+ok(res.locations === 2 && res.missions === 2, '설정·장소·임무를 한 번에 불러옴');
+ok(fresh.locations.find(l => l.name === '샤워장').code === 'L07' && fresh.locations.find(l => l.name === '주차장').code === 'L03', '장소 번호(인쇄한 QR) 그대로 유지');
+ok(fresh.missions[0].loc === fresh.locations.find(l => l.no === 7).id && fresh.missions[0].game === 'lock', '임무는 장소 번호로 다시 연결');
+ok(fresh.settings.mafiaCount === 2 && fresh.settings.gatherSec === 0 && fresh.settings.gatherPlace === '캠프 파이어', '설정 값 반영');
+['가', '나', '다', '라', '마'].forEach(n => G.join(fresh, n));
+G.assignTags(fresh); G.assignRoles(fresh); G.startGame(fresh, true);
+G.hostMeeting(fresh);
+ok(fresh.phase === 'gathering' && fresh.phaseEndsAt === null, '집결 제한 0이면 진행자가 직접 토론 시작');
+
 console.log(`\n결과: ${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);
