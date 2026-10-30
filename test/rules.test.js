@@ -18,32 +18,35 @@ async function post(p, body) {
   return { status: r.status, ...(await r.json()) };
 }
 
-// 간단한 SSE 클라이언트: 받은 상태와 원문을 모두 기록
+// 간단한 폴링 클라이언트: 화면과 같은 방식으로 /api/state 를 계속 묻고 받은 상태를 기록
 function listen(code, token) {
-  const ctl = new AbortController();
-  const c = { states: [], raw: '', last: null, close: () => ctl.abort() };
+  const c = { states: [], last: null, kicked: false, stopped: false, close() { c.stopped = true; } };
   (async () => {
-    try {
-      const r = await fetch(`${BASE}/api/events?code=${code}&token=${encodeURIComponent(token)}`, { signal: ctl.signal });
-      const dec = new TextDecoder(); let buf = '';
-      for await (const chunk of r.body) {
-        const s = dec.decode(chunk, { stream: true }); buf += s; c.raw += s;
-        let i;
-        while ((i = buf.indexOf('\n\n')) >= 0) {
-          const block = buf.slice(0, i); buf = buf.slice(i + 2);
-          const ev = (block.match(/^event: (.*)$/m) || [])[1];
-          const data = (block.match(/^data: (.*)$/m) || [])[1];
-          if (ev === 'state' && data) { const v = JSON.parse(data); c.states.push(v); c.last = v; }
-          if (ev === 'kicked') c.kicked = true;
-        }
-      }
-    } catch (_) { /* 종료 */ }
+    let rev = null;
+    while (!c.stopped) {
+      try {
+        const r = await post('/api/state', { code, token, rev, beat: true });
+        if (r.status === 400) { c.kicked = true; break; }
+        if (r.view) { c.states.push(r.view); c.last = r.view; }
+        if (r.rev) rev = r.rev;
+      } catch (_) { /* 서버 재시작 중 */ }
+      await sleep(30);
+    }
   })();
   return c;
 }
 
 async function main() {
-  const srv = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT, DATA_DIR: DATA }, stdio: ['ignore', 'pipe', 'inherit'] });
+  // TEST_REDIS=1 이면 가짜 Upstash 서버를 띄워 Redis 저장 방식(Vercel과 같은 경로)으로 시험합니다.
+  const ENV = { ...process.env, PORT, DATA_DIR: DATA };
+  delete ENV.KV_REST_API_URL; delete ENV.UPSTASH_REDIS_REST_URL;
+  if (process.env.TEST_REDIS) {
+    const kvPort = PORT + 100;
+    await require('./fake-upstash').start(kvPort);
+    Object.assign(ENV, { KV_REST_API_URL: `http://127.0.0.1:${kvPort}`, KV_REST_API_TOKEN: 'test' });
+    console.log('저장 방식: Redis (가짜 Upstash)');
+  }
+  const srv = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: ENV, stdio: ['ignore', 'pipe', 'inherit'] });
   await new Promise(r => srv.stdout.on('data', d => { if (String(d).includes('실행 중')) r(); }));
 
   try {
@@ -232,8 +235,9 @@ async function main() {
 
     console.log('\n[8] 투표 추방 → 승리 판정');
     // 서버 재시작 후에도 상태가 유지되는지 확인
+    Object.values(sse).forEach(s => s.close()); hostSse.close();
     srv.kill(); await sleep(600);
-    const srv2 = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], { env: { ...process.env, PORT, DATA_DIR: DATA }, stdio: ['ignore', 'pipe', 'inherit'] });
+    const srv2 = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], { env: ENV, stdio: ['ignore', 'pipe', 'inherit'] });
     await new Promise(r => srv2.stdout.on('data', d => { if (String(d).includes('실행 중')) r(); }));
     const after3 = (await post('/api/state', { code, token: tk(cit[1]) })).view;
     ok(after3.phase === 'active' && after3.me.role === 'citizen', '서버 재시작 후 게임 상태 유지');

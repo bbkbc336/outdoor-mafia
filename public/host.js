@@ -50,8 +50,9 @@ function connect() {
       render();
     },
     onDenied: (msg) => { store.del('mafia:hostlast'); H.stream = null; renderStart(msg); },
-    onKicked: () => {},
+    onKicked: (msg) => { store.del('mafia:hostlast'); H.stream = null; renderStart(msg); },
     onStatus: (on) => { if (H.online !== on) { H.online = on; renderBars(); } },
+    host: true,
   });
 }
 

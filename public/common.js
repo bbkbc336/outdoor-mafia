@@ -19,7 +19,7 @@ async function postJSON(path, body) {
   }
   let data = {};
   try { data = await r.json(); } catch (_) { /* 무시 */ }
-  if (!r.ok) return { ok: false, error: data.error || '요청이 실패했습니다.', view: data.view };
+  if (!r.ok) return { ok: false, status: r.status, error: data.error || '요청이 실패했습니다.', view: data.view };
   return { ok: true, ...data };
 }
 
@@ -89,31 +89,39 @@ function confirmBox(title, body, okLabel = '확인', danger = false) {
   });
 }
 
-// 실시간 연결 (Server-Sent Events). 끊기면 자동 재접속하고 복귀 시 상태를 다시 받습니다.
-function connectStream(code, token, { onState, onDenied, onKicked, onStatus }) {
-  let es = null, closed = false, retryTimer = null;
-  const open = () => {
+// 상태 받기 (폴링). 화면이 켜져 있으면 2.5초마다 묻고, 바뀐 게 없으면 서버가 짧게 답합니다.
+// 화면 잠금·앱 전환 후 돌아오면 즉시 다시 묻습니다.
+function connectStream(code, token, { onState, onDenied, onKicked, onStatus, host = false }) {
+  const EVERY = 2500, HIDDEN = 20000;
+  let closed = false, timer = null, inflight = false, rev = null, got = false, n = 0, last = null;
+  const schedule = () => { clearTimeout(timer); if (!closed) timer = setTimeout(poll, document.visibilityState === 'visible' ? EVERY : HIDDEN); };
+  async function poll() {
+    if (closed || inflight) return;
+    inflight = true; clearTimeout(timer);
+    const r = await postJSON('/api/state', { code, token, rev, host, beat: n++ % 4 === 0 });
+    inflight = false;
     if (closed) return;
-    if (es) es.close();
-    es = new EventSource(`/api/events?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`);
-    es.addEventListener('open', () => onStatus(true));
-    es.addEventListener('state', (e) => { onStatus(true); const v = JSON.parse(e.data); syncClock(v); onState(v); });
-    es.addEventListener('denied', (e) => { closed = true; es.close(); onDenied(JSON.parse(e.data).error); });
-    es.addEventListener('kicked', (e) => { closed = true; es.close(); onKicked(JSON.parse(e.data).reason); });
-    es.addEventListener('error', () => {
+    if (r.ok) {
+      onStatus(true); got = true; syncClock(r); rev = r.rev;
+      if (r.view) {
+        // 같은 내용이 다시 오면 화면을 다시 그리지 않습니다(펼친 메뉴·입력 유지).
+        const s = JSON.stringify({ ...r.view, serverNow: 0 });
+        if (s !== last) { last = s; onState(r.view); }
+      }
+    } else if (r.network || r.status >= 500) {
       onStatus(false);
-      if (es.readyState === EventSource.CLOSED && !closed) { clearTimeout(retryTimer); retryTimer = setTimeout(open, 2000); }
-    });
-  };
-  open();
-  // 화면 잠금·앱 전환 후 돌아오면 즉시 재연결해 최신 상태를 받습니다.
-  const vis = () => { if (document.visibilityState === 'visible' && !closed) open(); };
+    } else {
+      closed = true;
+      return got ? onKicked(r.error) : onDenied(r.error);
+    }
+    schedule();
+  }
+  poll();
+  const vis = () => { if (document.visibilityState === 'visible' && !closed) poll(); };
   document.addEventListener('visibilitychange', vis);
   window.addEventListener('online', vis);
   window.addEventListener('pageshow', (e) => { if (e.persisted) vis(); });
-  // 무료 호스팅이 잠들지 않도록 주기적으로 신호를 보냅니다.
-  const ping = setInterval(() => { if (document.visibilityState === 'visible') fetch('/api/ping', { cache: 'no-store' }).catch(() => {}); }, 240000);
-  return { close() { closed = true; clearInterval(ping); if (es) es.close(); document.removeEventListener('visibilitychange', vis); } };
+  return { close() { closed = true; clearTimeout(timer); document.removeEventListener('visibilitychange', vis); } };
 }
 
 const PHASE_NAME = {
