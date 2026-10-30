@@ -40,9 +40,9 @@ function listen(code, token) {
 function solveGame(r) {
   const d = r.data;
   return {
-    fire: { out: d.spots && d.spots.length }, power: { seq: d.seq }, lock: { codes: d.codes },
-    order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: Array(d.n).fill(0.95) }, sort: { bins: d.boxes },
-    level: { values: d.targets }, shape: { placed: (d.rounds || []).map(x => x.holes) },
+    fire: { out: d.spots && d.spots.length }, power: { links: (d.left || []).map((c, i) => [i, d.right.indexOf(c)]) }, lock: { seq: d.code },
+    order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: 0.95 }, sort: { bins: d.boxes },
+    level: { locked: 3 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c) },
   }[r.game];
 }
 

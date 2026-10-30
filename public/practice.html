@@ -25,13 +25,13 @@ const r = (n) => Math.floor(Math.random() * n);
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = r(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const MAKE = {
   fire: () => ({ hp: 3, spots: shuffle([...Array(20).keys()]).slice(0, 10).map(i => ({ x: (i % 4) * 24 + 12 + r(6), y: Math.floor(i / 4) * 18 + 12 + r(6) })) }),
-  power: () => ({ rounds: [3, 4, 5, 6], seq: Array.from({ length: 6 }, () => r(4)) }),
-  lock: () => ({ codes: [4, 5, 6, 6].map(n => Array.from({ length: n }, () => r(10)).join('')) }),
+  power: () => { const w = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'white']; return { left: shuffle(w), right: shuffle(w) }; },
+  lock: () => { const code = []; let prev = 0; while (code.length < 4) { const n = r(20), g = Math.abs(n - prev); if (Math.min(g, 20 - g) >= 4) { code.push(n); prev = n; } } return { code }; },
   order: () => ({ layout: shuffle([...Array(25)].map((_, i) => i + 1)) }),
-  lens: () => ({ n: 3 }),
+  lens: () => ({ wipe: 0.4 }),
   sort: () => ({ boxes: Array.from({ length: 16 }, () => ['red', 'blue', 'yellow', 'green'][r(4)]) }),
-  level: () => ({ targets: Array.from({ length: 9 }, () => 15 + r(71)) }),
-  shape: () => ({ rounds: [0, 1, 2].map(() => { const set = shuffle(['circle', 'triangle', 'square', 'star', 'diamond']).slice(0, 4); return { pieces: shuffle(set), holes: shuffle(set) }; }) }),
+  level: () => ({ hold: 4000, targets: [0, 1, 2].map(() => ({ base: 30 + r(41), amp: 10 + r(9), period: 5000 + r(3000), phase: r(628) / 100 })) }),
+  shape: () => { const set = ['circle', 'triangle', 'square', 'star'].flatMap(s => ['blue', 'orange'].map(c => ({ s, c }))); return { pieces: shuffle(set), holes: shuffle(set) }; },
 };
 const best = store.get('mafia:practice') || {};
 function drawBest() {

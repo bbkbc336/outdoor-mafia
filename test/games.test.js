@@ -11,14 +11,14 @@ let clock = Date.now();
 Date.now = () => clock;
 
 const right = (game, d) => ({
-  fire: { out: d.spots && d.spots.length }, power: { seq: d.seq }, lock: { codes: d.codes },
-  order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: Array(d.n).fill(0.9) }, sort: { bins: d.boxes },
-  level: { values: (d.targets || []).map(t => t + 3) }, shape: { placed: (d.rounds || []).map(x => x.holes) },
+  fire: { out: d.spots && d.spots.length }, power: { links: (d.left || []).map((c, i) => [i, d.right.indexOf(c)]) }, lock: { seq: d.code },
+  order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: 0.95 }, sort: { bins: d.boxes },
+  level: { locked: 3 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c) },
 }[game]);
 const wrong = (game, d) => ({
-  fire: { out: 3 }, power: { seq: (d.seq || []).map(x => (x + 1) % 4) }, lock: { codes: (d.codes || []).slice(0, 3) },
-  order: { seq: [2, 1, ...[...Array(23)].map((_, i) => i + 3)] }, lens: { clean: [0.9, 0.9, 0.3] }, sort: { bins: (d.boxes || []).map(c => (c === 'red' ? 'blue' : 'red')) },
-  level: { values: (d.targets || []).map(t => t + 30) }, shape: { placed: (d.rounds || []).map(x => x.holes).slice(0, 2) },
+  fire: { out: 3 }, power: { links: (d.left || []).map((c, i) => [i, i]) }, lock: { seq: (d.code || []).slice(0, 3) },
+  order: { seq: [2, 1, ...[...Array(23)].map((_, i) => i + 3)] }, lens: { clean: 0.3 }, sort: { bins: (d.boxes || []).map(c => (c === 'red' ? 'blue' : 'red')) },
+  level: { locked: 2 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c).slice(0, 7) },
 }[game]);
 
 const room = G.createRoom(new Set());

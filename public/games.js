@@ -1,18 +1,18 @@
 // 임무 미니게임 8종. 설명 없이 화면만 보고 알 수 있게: 목표가 보이고, 조작은 한 가지, 첫 동작은 반짝임.
-// 한 판은 약 20초 분량입니다. 여러 단계인 게임은 머리글 오른쪽에 진행 단계(1/3)가 보입니다.
+// 한 판은 약 20초 분량입니다(한 번에 끝나는 한 판, 양과 난이도로 조절). 머리글 오른쪽에 진행 상황이 보입니다.
 // Games.open({ game, data }, onWin(result)) — 문제(data)는 서버가 만들고, 결과는 서버가 다시 확인합니다.
 'use strict';
 
 const Games = (() => {
   const TITLE = {
     fire: '🔥 불을 모두 끄세요',
-    power: '💡 깜빡인 순서대로',
-    lock: '🔐 같은 번호를 누르세요',
+    power: '🔌 같은 색끼리 이으세요',
+    lock: '🔐 다이얼을 돌려 맞추세요',
     order: '🔢 1부터 차례로 누르세요',
     lens: '🧽 문질러서 닦으세요',
     sort: '📦 같은 색 칸으로 옮기세요',
     level: '⚡ 막대를 점선에 맞추세요',
-    shape: '🧩 같은 모양에 끼우세요',
+    shape: '🧩 같은 모양·색에 끼우세요',
   };
   const COLOR = { red: '#ff4d5e', blue: '#4da3ff', yellow: '#ffd23f', green: '#3ddc84' };
   const shake = (el) => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); buzz([40, 40, 40]); };
@@ -125,70 +125,107 @@ const Games = (() => {
       body.appendChild(area);
     },
 
-    // 2. 전구 네 개가 깜빡인 순서를 그대로 누르기. 판마다 하나씩 길어집니다(3→6).
+    // 2. 왼쪽 색 점을 오른쪽 같은 색 점까지 끌어서 전선 잇기 (점을 차례로 눌러도 됨). 7쌍.
     power(body, d, win) {
-      const grid = h('div', 'ggrid g2 simon');
-      const LAMP = ['#ff4d5e', '#3ddc84', '#4da3ff', '#ffd23f'];
-      let round = 0, input = 0, lock = true, timers = [];
-      const pads = LAMP.map((c, i) => {
-        const b = h('button', 'pad', '💡');
-        b.style.setProperty('--c', c);
-        onTap(b, () => press(i));
-        grid.appendChild(b);
-        return b;
+      const WIRE = { red: '#ff4d5e', orange: '#ff9f1c', yellow: '#ffd23f', green: '#3ddc84', blue: '#4da3ff', purple: '#b07cff', white: '#f4f6fb' };
+      const box = h('div', 'wires');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      box.appendChild(svg);
+      const links = [];
+      const mk = (side, c, i) => {
+        const e = h('div', 'wdot ' + side + (side === 'l' && i === 0 ? ' hint' : ''));
+        e.style.background = WIRE[c]; e.style.top = ((i + 0.5) / d.left.length * 100) + '%';
+        e.dataset.i = i; e.dataset.c = c;
+        box.appendChild(e);
+        return e;
+      };
+      const L = d.left.map((c, i) => mk('l', c, i)), R = d.right.map((c, i) => mk('r', c, i));
+      const mid = (e) => { const b = box.getBoundingClientRect(), r = e.getBoundingClientRect(); return [r.left + r.width / 2 - b.left, r.top + r.height / 2 - b.top]; };
+      const line = (c, [x1, y1], [x2, y2]) => {
+        const ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        Object.entries({ x1, y1, x2, y2, stroke: WIRE[c], 'stroke-width': 12, 'stroke-linecap': 'round' }).forEach(([k, v]) => ln.setAttribute(k, v));
+        svg.appendChild(ln);
+        return ln;
+      };
+      let picked = null;
+      const connect = (l, r) => {
+        picked = null; L.forEach(x => x.classList.remove('sel'));
+        if (!r || r.classList.contains('done') || l.classList.contains('done')) return;
+        if (r.dataset.c !== l.dataset.c) return shake(r);
+        l.classList.add('done'); r.classList.add('done');
+        line(l.dataset.c, mid(l), mid(r));
+        links.push([Number(l.dataset.i), Number(r.dataset.i)]); tick();
+        win.step(`${links.length}/${d.left.length}`);
+        if (links.length === d.left.length) win({ links });
+      };
+      L.forEach(l => {
+        l.addEventListener('pointerdown', (e) => {
+          if (done || l.classList.contains('done')) return;
+          e.preventDefault();
+          l.setPointerCapture(e.pointerId);
+          box.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
+          const from = mid(l), sx = e.clientX, sy = e.clientY;
+          const tmp = line(l.dataset.c, from, from);
+          tmp.setAttribute('opacity', '0.6');
+          const b = box.getBoundingClientRect();
+          const move = (ev) => { tmp.setAttribute('x2', ev.clientX - b.left); tmp.setAttribute('y2', ev.clientY - b.top); };
+          const up = (ev) => {
+            l.removeEventListener('pointermove', move); l.removeEventListener('pointerup', up); l.removeEventListener('pointercancel', up);
+            tmp.remove();
+            if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 12) { L.forEach(x => x.classList.remove('sel')); picked = l; l.classList.add('sel'); return; }
+            const t = document.elementFromPoint(ev.clientX, ev.clientY);
+            const r = t && t.closest && t.closest('.wdot.r');
+            if (r) connect(l, r); else shake(l);
+          };
+          l.addEventListener('pointermove', move); l.addEventListener('pointerup', up); l.addEventListener('pointercancel', up);
+        });
       });
-      const flash = (i, ms) => { pads[i].classList.add('lit'); timers.push(setTimeout(() => pads[i].classList.remove('lit'), ms)); };
-      const show = () => {
-        lock = true; input = 0;
-        const n = d.rounds[round];
-        win.step(`👀 ${round + 1}/${d.rounds.length}`);
-        for (let k = 0; k < n; k++) timers.push(setTimeout(() => flash(d.seq[k], 380), 700 + k * 600));
-        timers.push(setTimeout(() => { lock = false; win.step(`👆 ${round + 1}/${d.rounds.length}`); }, 700 + n * 600));
-      };
-      const press = (i) => {
-        if (lock || done || !root) return;
-        flash(i, 160);
-        if (i !== d.seq[input]) { shake(grid); return show(); }
-        tick();
-        if (++input < d.rounds[round]) return;
-        if (++round === d.rounds.length) { lock = true; return win({ seq: d.seq.slice() }); }
-        lock = true; timers.push(setTimeout(show, 450));
-      };
-      body.appendChild(grid);
-      show();
+      R.forEach(r => onTap(r, () => { if (picked) connect(picked, r); }));
+      win.step(`0/${d.left.length}`);
+      body.appendChild(box);
     },
 
-    // 3. 위에 보이는 번호를 키패드로 그대로 입력. 문 네 개(4·5·6·6자리).
+    // 3. 다이얼을 돌려 화살표(▼)를 위에 보이는 숫자에 차례로 맞추기. 손을 떼면 가까운 숫자에 멈춥니다.
     lock(body, d, win) {
-      const show = h('div', 'lcd');
-      const slots = h('div', 'slots');
-      let door = 0, typed = '';
-      const code = () => d.codes[door];
+      const N = 20, STEP = 360 / N;
+      const goal = h('div', 'dialgoal', d.code.map((n, i) => `<span class="${i === 0 ? 'hint' : ''}">${n}</span>`).join(''));
+      const wrap = h('div', 'dialwrap', '<div class="dialarrow">▼</div>');
+      const dial = h('div', 'dial');
+      dial.innerHTML = [...Array(N)].map((_, i) => `<span style="transform:rotate(${i * STEP}deg)"><b>${i}</b></span>`).join('') + '<div class="dialnow">0</div>';
+      wrap.appendChild(dial);
+      const now = dial.querySelector('.dialnow');
+      let rot = 0, k = 0, last = null;
+      const under = () => ((Math.round(-rot / STEP) % N) + N) % N;
       const draw = () => {
-        show.innerHTML = code().split('').map(c => `<span>${c}</span>`).join('');
-        slots.innerHTML = code().split('').map((_, i) => `<span class="${typed[i] ? 'f' : ''}">${typed[i] || ''}</span>`).join('');
-        win.step(`🚪 ${door + 1}/${d.codes.length}`);
+        dial.style.transform = `rotate(${rot}deg)`;
+        now.style.transform = `translate(-50%, -50%) rotate(${-rot}deg)`;
+        now.textContent = under();
       };
-      const pad = h('div', 'ggrid g3 keypad');
-      ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].forEach(k => {
-        const b = h('button', k === '' ? 'blank' : '', k);
-        if (k === d.codes[0][0]) b.classList.add('hint');
-        onTap(b, () => {
-          if (!k || done) return;
-          pad.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
-          if (k === '⌫') typed = typed.slice(0, -1);
-          else if (typed.length < code().length) typed += k;
-          buzz(10); draw();
-          if (typed.length < code().length) return;
-          if (typed !== code()) { shake(slots); setTimeout(() => { typed = ''; draw(); }, 350); return; }
-          tick();
-          if (++door === d.codes.length) return win({ codes: d.codes.slice() });
-          typed = ''; setTimeout(draw, 250);
-        });
-        pad.appendChild(b);
+      const ang = (e) => { const r = dial.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+      dial.addEventListener('pointerdown', (e) => {
+        if (done) return;
+        e.preventDefault(); dial.setPointerCapture(e.pointerId);
+        dial.classList.remove('snap'); last = ang(e);
+        goal.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
       });
+      dial.addEventListener('pointermove', (e) => {
+        if (last === null || done) return;
+        const a = ang(e); let da = a - last; last = a;
+        if (da > 180) da -= 360; if (da < -180) da += 360;
+        const before = under(); rot += da; draw();
+        if (under() !== before) buzz(5);
+      });
+      const up = () => {
+        if (last === null) return;
+        last = null;
+        rot = Math.round(rot / STEP) * STEP; dial.classList.add('snap'); draw();
+        if (under() !== d.code[k]) return;
+        goal.children[k].classList.add('ok'); tick();
+        if (++k === d.code.length) return win({ seq: d.code.slice() });
+      };
+      dial.addEventListener('pointerup', up); dial.addEventListener('pointercancel', up);
       draw();
-      body.append(show, slots, pad);
+      body.append(goal, wrap);
     },
 
     // 4. 1부터 25까지 차례로. 처음 1만 반짝입니다.
@@ -210,61 +247,51 @@ const Games = (() => {
       body.appendChild(grid);
     },
 
-    // 5. 먼지 덮인 렌즈 세 개를 차례로 문질러 닦기. 두껍게 낀 먼지는 여러 번 문질러야 지워집니다.
+    // 5. 먼지가 두껍게 낀 렌즈를 문질러 닦기. 한 번에 다 안 지워져 여러 번 문질러야 합니다.
     lens(body, d, win) {
-      const results = [];
-      const area = h('div', 'garea lens');
+      const area = h('div', 'garea lens', '<div class="view">🪐<span>✨</span></div><canvas></canvas><div class="finger">👆</div>');
       body.appendChild(area);
-      const VIEWS = ['🪐', '🌙', '🌍', '☄️'];
-      const next = () => {
-        const k = results.length;
-        win.step(`🔭 ${k + 1}/${d.n}`);
-        area.innerHTML = `<div class="view">${VIEWS[k % VIEWS.length]}<span>✨</span></div><canvas></canvas>${k === 0 ? '<div class="finger">👆</div>' : ''}`;
-        const cv = area.querySelector('canvas'), finger = area.querySelector('.finger');
-        const W = area.clientWidth, H = area.clientHeight;
-        cv.width = W; cv.height = H;
-        const g = cv.getContext('2d');
-        g.fillStyle = '#7a6a55'; g.fillRect(0, 0, W, H);
-        for (let i = 0; i < 900; i++) { // 먼지 얼룩
-          g.fillStyle = `rgba(${60 + Math.random() * 80},${50 + Math.random() * 60},${30 + Math.random() * 40},0.5)`;
-          g.beginPath(); g.arc(Math.random() * W, Math.random() * H, 2 + Math.random() * 10, 0, 7); g.fill();
+      const cv = area.querySelector('canvas'), finger = area.querySelector('.finger');
+      const W = area.clientWidth, H = area.clientHeight;
+      cv.width = W; cv.height = H;
+      const g = cv.getContext('2d');
+      g.fillStyle = '#7a6a55'; g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 900; i++) { // 먼지 얼룩
+        g.fillStyle = `rgba(${60 + Math.random() * 80},${50 + Math.random() * 60},${30 + Math.random() * 40},0.5)`;
+        g.beginPath(); g.arc(Math.random() * W, Math.random() * H, 2 + Math.random() * 10, 0, 7); g.fill();
+      }
+      g.globalCompositeOperation = 'destination-out';
+      g.globalAlpha = d.wipe || 1; // 한 번 문지를 때 지워지는 정도
+      g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = Math.max(40, W / 8);
+      let last = null, checkAt = 0;
+      const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+      // 둥근 렌즈 안쪽만 셉니다(바깥 모서리는 손가락이 닿지 않음).
+      const R2 = (Math.min(W, H) / 2 - 4) ** 2;
+      const cleaned = () => {
+        const px = g.getImageData(0, 0, W, H).data; let clear = 0, n = 0;
+        for (let i = 3; i < px.length; i += 4 * 37) {
+          const k = (i - 3) / 4, x = k % W - W / 2, y = Math.floor(k / W) - H / 2;
+          if (x * x + y * y > R2) continue;
+          n++; if (px[i] < 40) clear++;
         }
-        g.globalCompositeOperation = 'destination-out';
-        g.globalAlpha = 0.75; // 한 번에 다 안 닦이고 두 번쯤 문질러야 깨끗해짐
-        g.lineCap = 'round'; g.lineJoin = 'round'; g.lineWidth = Math.max(40, W / 8);
-        let last = null, checkAt = 0, finished = false;
-        const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-        // 둥근 렌즈 안쪽만 셉니다(바깥 모서리는 손가락이 닿지 않음).
-        const R2 = (Math.min(W, H) / 2 - 4) ** 2;
-        const cleaned = () => {
-          const px = g.getImageData(0, 0, W, H).data; let clear = 0, n = 0;
-          for (let i = 3; i < px.length; i += 4 * 37) {
-            const k = (i - 3) / 4, x = k % W - W / 2, y = Math.floor(k / W) - H / 2;
-            if (x * x + y * y > R2) continue;
-            n++; if (px[i] < 40) clear++;
-          }
-          return clear / n;
-        };
-        cv.addEventListener('pointerdown', (e) => { if (done || finished) return; cv.setPointerCapture(e.pointerId); last = pos(e); if (finger) finger.remove(); });
-        cv.addEventListener('pointermove', (e) => {
-          if (!last || done || finished) return;
-          const p = pos(e);
-          g.beginPath(); g.moveTo(last[0], last[1]); g.lineTo(p[0], p[1]); g.stroke();
-          last = p;
-          if (Date.now() > checkAt) {
-            checkAt = Date.now() + 150;
-            const c = cleaned();
-            if (c >= 0.88) {
-              finished = true; g.clearRect(0, 0, W, H); results.push(c); tick();
-              if (results.length === d.n) win({ clean: results });
-              else setTimeout(next, 450);
-            }
-          }
-        });
-        const end = () => { last = null; };
-        cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+        return clear / n;
       };
-      next();
+      win.step('0%');
+      cv.addEventListener('pointerdown', (e) => { if (done) return; cv.setPointerCapture(e.pointerId); last = pos(e); finger.remove(); });
+      cv.addEventListener('pointermove', (e) => {
+        if (!last || done) return;
+        const p = pos(e);
+        g.beginPath(); g.moveTo(last[0], last[1]); g.lineTo(p[0], p[1]); g.stroke();
+        last = p;
+        if (Date.now() > checkAt) {
+          checkAt = Date.now() + 150;
+          const c = cleaned();
+          win.step(Math.min(100, Math.floor(c / 0.88 * 100)) + '%');
+          if (c >= 0.88) { g.clearRect(0, 0, W, H); win({ clean: c }); }
+        }
+      });
+      const end = () => { last = null; };
+      cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
     },
 
     // 6. 위에서 오는 상자 16개를 같은 색 칸으로 끌어 넣기 (칸을 눌러도 됨)
@@ -303,83 +330,87 @@ const Games = (() => {
       body.append(queue, top, bottom);
     },
 
-    // 7. 막대를 끌어 올려 점선 높이에 맞추기. 세 개씩 세 판.
+    // 7. 천천히 오르내리는 점선을 막대로 따라가기. 점선에 맞춰 둔 동안 아래 칸이 차고, 다 차면 그 막대는 고정됩니다.
     level(body, d, win) {
       const wrap = h('div', 'levels');
-      body.appendChild(wrap);
-      const values = [];
-      const round = (r) => {
-        win.step(`${r + 1}/3`);
-        wrap.innerHTML = '';
-        const tg = d.targets.slice(r * 3, r * 3 + 3), vs = [0, 0, 0];
-        const ok = (k) => Math.abs(vs[k] - tg[k]) <= 5;
-        let finished = false;
-        tg.forEach((t, k) => {
-          const track = h('div', 'track' + (r === 0 && k === 0 ? ' hint' : ''), `<div class="target" style="bottom:${t}%"></div><div class="fill"></div>`);
-          const fill = track.querySelector('.fill');
-          const set = (e) => {
-            const rc = track.getBoundingClientRect();
-            vs[k] = Math.round(Math.max(0, Math.min(100, (rc.bottom - e.clientY) / rc.height * 100)));
-            fill.style.height = vs[k] + '%';
-            track.classList.toggle('ok', ok(k));
-          };
-          track.addEventListener('pointerdown', (e) => { if (done || finished) return; e.preventDefault(); track.setPointerCapture(e.pointerId); wrap.querySelectorAll('.hint').forEach(x => x.classList.remove('hint')); set(e); track.dragging = true; });
-          track.addEventListener('pointermove', (e) => { if (track.dragging && !done && !finished) set(e); });
-          const up = () => {
-            if (!track.dragging) return;
-            track.dragging = false;
-            if (ok(k)) tick();
-            if (finished || ![0, 1, 2].every(ok)) return;
-            finished = true; values.push(...vs);
-            if (r === 2) win({ values });
-            else setTimeout(() => round(r + 1), 400);
-          };
-          track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
-          wrap.appendChild(track);
+      const TOL = 7;
+      let locked = 0, lastTs = performance.now();
+      const mine = root; // 이 게임 화면이 닫히면 움직임을 멈춥니다(다음 게임에 영향 없게).
+      const bars = d.targets.map((t, k) => {
+        const col = h('div', 'lvcol');
+        const track = h('div', 'track' + (k === 0 ? ' hint' : ''), '<div class="target"></div><div class="fill"></div>');
+        const meter = h('div', 'lvmeter', '<div></div>');
+        col.append(track, meter);
+        wrap.appendChild(col);
+        const bar = { t, track, fill: track.querySelector('.fill'), line: track.querySelector('.target'), meter: meter.firstChild, v: 0, held: 0, pos: t.base, done: false };
+        const set = (e) => {
+          const r = track.getBoundingClientRect();
+          bar.v = Math.round(Math.max(0, Math.min(100, (r.bottom - e.clientY) / r.height * 100)));
+          bar.fill.style.height = bar.v + '%';
+        };
+        track.addEventListener('pointerdown', (e) => { if (done || bar.done) return; e.preventDefault(); track.setPointerCapture(e.pointerId); wrap.querySelectorAll('.hint').forEach(x => x.classList.remove('hint')); set(e); bar.drag = true; });
+        track.addEventListener('pointermove', (e) => { if (bar.drag && !done && !bar.done) set(e); });
+        const up = () => { bar.drag = false; };
+        track.addEventListener('pointerup', up); track.addEventListener('pointercancel', up);
+        return bar;
+      });
+      const frame = (ts) => {
+        if (root !== mine || done) return;
+        const dt = Math.min(100, ts - lastTs); lastTs = ts;
+        bars.forEach(b => {
+          if (b.done) return;
+          b.pos = b.t.base + b.t.amp * Math.sin(ts / b.t.period * Math.PI * 2 + b.t.phase);
+          b.line.style.bottom = b.pos + '%';
+          const ok = Math.abs(b.v - b.pos) <= TOL;
+          b.track.classList.toggle('ok', ok);
+          if (ok) b.held += dt;
+          b.meter.style.width = Math.min(100, b.held / d.hold * 100) + '%';
+          if (b.held >= d.hold) {
+            b.done = true; b.drag = false; b.track.classList.add('ok', 'locked'); tick();
+            win.step(`${++locked}/${bars.length}`);
+            if (locked === bars.length) win({ locked });
+          }
         });
+        requestAnimationFrame(frame);
       };
-      round(0);
+      win.step(`0/${bars.length}`);
+      body.appendChild(wrap);
+      requestAnimationFrame(frame);
     },
 
-    // 8. 조각을 같은 모양 구멍으로 끌기 (조각을 누르고 구멍을 눌러도 됨). 네 개씩 세 판.
+    // 8. 조각을 모양과 색이 같은 구멍으로 끌기 (조각을 누르고 구멍을 눌러도 됨). 한 판에 8조각.
     shape(body, d, win) {
-      const all = [];
-      const round = (r) => {
-        win.step(`${r + 1}/${d.rounds.length}`);
-        body.innerHTML = '';
-        const rd = d.rounds[r];
-        const pieces = h('div', 'shapes');
-        const holes = h('div', 'shapes holes');
-        const placed = []; let picked = null;
-        rd.holes.forEach(s => {
-          const hole = h('div', 'hole', shapeSvg(s, false));
-          hole.dataset.shape = s;
-          onTap(hole, () => { if (picked) put(picked, hole); });
-          holes.appendChild(hole);
-        });
-        const put = (piece, hole) => {
-          if (hole.dataset.shape !== piece.dataset.shape || hole.classList.contains('full')) { picked = null; piece.classList.remove('sel'); return shake(piece); }
-          hole.classList.add('full'); hole.innerHTML = shapeSvg(hole.dataset.shape, true);
-          piece.remove(); picked = null; placed.push(hole.dataset.shape); tick();
-          if (placed.length < rd.holes.length) return;
-          all.push(placed);
-          if (all.length === d.rounds.length) win({ placed: all });
-          else setTimeout(() => round(r + 1), 400);
-        };
-        rd.pieces.forEach((s, k) => {
-          const p = h('div', 'piece' + (r === 0 && k === 0 ? ' hint' : ''), shapeSvg(s, true));
-          p.dataset.shape = s;
-          draggable(p, (t, moved) => {
-            pieces.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
-            const hole = t && t.closest && t.closest('.hole');
-            if (hole) return put(p, hole);
-            if (!moved) { pieces.querySelectorAll('.sel').forEach(x => x.classList.remove('sel')); picked = p; p.classList.add('sel'); }
-          });
-          pieces.appendChild(p);
-        });
-        body.append(pieces, h('div', 'arrow', '⬇'), holes);
+      const PART = { blue: '#4da3ff', orange: '#ff9f1c' };
+      const key = (x) => x.s + '-' + x.c;
+      const pieces = h('div', 'shapes');
+      const holes = h('div', 'shapes holes');
+      const placed = []; let picked = null;
+      d.holes.forEach(x => {
+        const hole = h('div', 'hole', shapeSvg(x.s, false));
+        hole.dataset.key = key(x); hole.style.color = PART[x.c];
+        onTap(hole, () => { if (picked) put(picked, hole); });
+        holes.appendChild(hole);
+      });
+      const put = (piece, hole) => {
+        if (hole.dataset.key !== piece.dataset.key || hole.classList.contains('full')) { picked = null; piece.classList.remove('sel'); return shake(piece); }
+        hole.classList.add('full'); hole.innerHTML = shapeSvg(hole.dataset.key.split('-')[0], true);
+        piece.remove(); picked = null; placed.push(hole.dataset.key); tick();
+        win.step(`${placed.length}/${d.holes.length}`);
+        if (placed.length === d.holes.length) win({ placed });
       };
-      round(0);
+      d.pieces.forEach((x, k) => {
+        const p = h('div', 'piece' + (k === 0 ? ' hint' : ''), shapeSvg(x.s, true));
+        p.dataset.key = key(x); p.style.color = PART[x.c];
+        draggable(p, (t, moved) => {
+          pieces.querySelectorAll('.hint').forEach(y => y.classList.remove('hint'));
+          const hole = t && t.closest && t.closest('.hole');
+          if (hole) return put(p, hole);
+          if (!moved) { pieces.querySelectorAll('.sel').forEach(y => y.classList.remove('sel')); picked = p; p.classList.add('sel'); }
+        });
+        pieces.appendChild(p);
+      });
+      win.step(`0/${d.holes.length}`);
+      body.append(pieces, h('div', 'arrow', '⬇'), holes);
     },
   };
 

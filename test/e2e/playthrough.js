@@ -77,20 +77,30 @@ async function playGame(page) {
       const f = g.locator('.flame:not(.out)').first();
       if (await f.count()) await f.tap(); else await sleep(300);
     }
-  } else if (await g.locator('.simon').count()) {
-    const d = (await view(page)).me.task.challenge;
-    for (const [r, n] of d.rounds.entries()) {
-      // 다른 사람이 마지막 임무를 끝내 게임이 끝나면 화면이 닫히므로 그때는 멈춥니다.
-      await page.waitForFunction((want) => !document.querySelector('.game') || ((document.querySelector('.gstep') || {}).textContent || '') === want, `👆 ${r + 1}/${d.rounds.length}`, { timeout: 10000 });
-      if (!(await g.count())) break;
-      for (let k = 0; k < n; k++) await g.locator('.simon .pad').nth(d.seq[k]).tap();
-      await sleep(300);
+  } else if (await g.locator('.wires').count()) {
+    // 왼쪽 점을 같은 색 오른쪽 점까지 끌기
+    for (const l of await g.locator('.wdot.l').all()) {
+      if (await won()) break;
+      const c = await l.getAttribute('data-c');
+      await touchDrag(page, await center(l), await center(g.locator(`.wdot.r[data-c="${c}"]`)));
+      await sleep(100);
     }
-  } else if (await g.locator('.lcd').count()) {
-    for (let door = 0; door < 4 && !(await won()); door++) {
-      const code = (await g.locator('.lcd').innerText()).replace(/\s/g, '');
-      for (const c of code) await g.locator('.keypad button').filter({ hasText: new RegExp(`^${c}$`) }).tap();
-      await sleep(400);
+  } else if (await g.locator('.dial').count()) {
+    // 다이얼을 원을 따라 돌려 숫자를 화살표 밑에 맞춘 뒤 손 떼기
+    const code = (await g.locator('.dialgoal span').allInnerTexts()).map(Number);
+    for (const n of code) {
+      if (await won()) break;
+      const cur = Number(await g.locator('.dialnow').innerText());
+      let delta = -(n - cur) * 18; delta = ((delta % 360) + 540) % 360 - 180;
+      const b = await g.locator('.dialwrap').boundingBox(); // 돌아간 다이얼은 테두리 상자가 커지므로 바깥 틀 기준
+      const cx = b.x + b.width / 2, cy = b.y + b.height / 2, rad = b.width * 0.38;
+      const at = (deg) => [cx + rad * Math.cos(deg * Math.PI / 180), cy + rad * Math.sin(deg * Math.PI / 180)];
+      const send = (type, [x, y]) => page.cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      const steps = Math.max(2, Math.ceil(Math.abs(delta) / 10));
+      await send('touchStart', at(-90));
+      for (let i = 1; i <= steps; i++) { await send('touchMove', at(-90 + delta * i / steps)); await sleep(16); }
+      await send('touchEnd', [0, 0]);
+      await sleep(300);
     }
   } else if (await g.locator('.order').count()) {
     for (let n = 1; n <= 25; n++) await g.locator('.order button').filter({ hasText: new RegExp(`^${n}$`) }).tap();
@@ -116,19 +126,25 @@ async function playGame(page) {
       await sleep(150);
     }
   } else if (await g.locator('.track').count()) {
-    for (let r = 0; r < 3 && !(await won()); r++) {
-      for (const t of await g.locator('.track').all()) {
-        const tb = await t.boundingBox(), lb = await t.locator('.target').boundingBox();
-        await touchDrag(page, [tb.x + tb.width / 2, tb.y + tb.height - 8], [tb.x + tb.width / 2, lb.y + 2]);
+    // 오르내리는 점선을 손가락으로 따라가며 막대마다 4초 넘게 버티기
+    const send = (type, x, y) => page.cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    for (const t of await g.locator('.track').all()) {
+      if (await won()) break;
+      const tb = await t.boundingBox();
+      const x = tb.x + tb.width / 2;
+      await send('touchStart', x, tb.y + tb.height - 8);
+      for (let i = 0; i < 120 && !(await t.evaluate(e => e.classList.contains('locked'))); i++) {
+        const lb = await t.locator('.target').boundingBox();
+        await send('touchMove', x, lb.y + 2);
+        await sleep(50);
       }
-      await sleep(600);
+      await send('touchEnd');
     }
   } else if (await g.locator('.piece').count()) {
-    for (let i = 0; i < 20 && !(await won()); i++) {
+    for (let i = 0; i < 12 && await g.locator('.piece').count(); i++) {
       const p = g.locator('.piece').first();
-      if (!(await p.count())) { await sleep(300); continue; }
-      const shape = await p.getAttribute('data-shape');
-      await touchDrag(page, await center(p), await center(g.locator(`.hole[data-shape="${shape}"]:not(.full)`)));
+      const key = await p.getAttribute('data-key');
+      await touchDrag(page, await center(p), await center(g.locator(`.hole[data-key="${key}"]:not(.full)`)));
       await sleep(150);
     }
   }
