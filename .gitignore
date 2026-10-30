@@ -2,7 +2,8 @@ node_modules/
 data/
 shots/
 *.log
-.env
+.env*
+.vercel/
 .DS_Store
 Thumbs.db
 __pycache__/

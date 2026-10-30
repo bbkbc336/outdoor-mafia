@@ -1,12 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": "",
-  "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/handler?__p=/api/:path*" },
-    { "source": "/print", "destination": "/api/handler?__p=/print" },
-    { "source": "/qr.svg", "destination": "/api/handler?__p=/qr.svg" },
-    { "source": "/host", "destination": "/host.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "/api/handler?__p=/api/:path*"
+    },
+    {
+      "source": "/print",
+      "destination": "/api/handler?__p=/print"
+    },
+    {
+      "source": "/qr.svg",
+      "destination": "/api/handler?__p=/qr.svg"
+    },
+    {
+      "source": "/host",
+      "destination": "/host.html"
+    }
   ]
 }
