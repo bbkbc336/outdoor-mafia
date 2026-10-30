@@ -158,7 +158,15 @@ const GAME_NAME = {
     d.el.addEventListener('click', seen, { capture: true, once: true });
     setTimeout(() => {
       d.el.removeEventListener('click', seen, true);
-      if (!clicked && d.el.isConnected && !d.el.disabled) d.el.click();
+      if (!clicked && d.el.isConnected && !d.el.disabled) { synth = { el: d.el, t: Date.now() }; d.el.click(); }
     }, 400);
+  }, true);
+  // 대신 누른 뒤 진짜 click이 늦게 도착하면(느린 휴대폰) 두 번 눌리지 않게 버립니다.
+  let synth = null;
+  document.addEventListener('click', (e) => {
+    if (!e.isTrusted || !synth) return;
+    const hit = e.target.closest && e.target.closest('button, a, [data-a], [data-run], [data-tab], [data-act]') === synth.el && Date.now() - synth.t < 1000;
+    if (hit) { e.preventDefault(); e.stopImmediatePropagation(); }
+    synth = null;
   }, true);
 })();

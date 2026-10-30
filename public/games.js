@@ -18,6 +18,20 @@ const Games = (() => {
   const tick = () => buzz(20);
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
+  // 누르기: 손가락을 뗄 때(pointerup) 바로 처리합니다. 브라우저가 click을 만들지 않는 경우가 있어서입니다.
+  // 마우스·키보드는 click으로도 동작하고, 한 번 누름이 두 번 처리되지 않게 막습니다.
+  function onTap(el, fn) {
+    let down = null, fired = 0;
+    el.addEventListener('pointerdown', (e) => { down = { id: e.pointerId, x: e.clientX, y: e.clientY }; });
+    el.addEventListener('pointercancel', () => { down = null; });
+    el.addEventListener('pointerup', (e) => {
+      const d = down; down = null;
+      if (!d || d.id !== e.pointerId || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 24) return;
+      fired = Date.now(); fn();
+    });
+    el.addEventListener('click', () => { if (Date.now() - fired > 800) fn(); });
+  }
+
   let root = null, done = false;
 
   function close() { if (root) root.remove(); root = null; }
@@ -27,7 +41,7 @@ const Games = (() => {
     done = false;
     root = h('div', 'game');
     root.innerHTML = `<div class="ghead"><b>${TITLE[info.game] || '임무'}</b><button class="gx" aria-label="닫기">✕</button></div><div class="gbody"></div>`;
-    root.querySelector('.gx').onclick = close;
+    onTap(root.querySelector('.gx'), close);
     document.body.appendChild(root);
     const body = root.querySelector('.gbody');
     const win = (result) => {
@@ -76,12 +90,12 @@ const Games = (() => {
       d.spots.forEach((p, i) => {
         const b = h('button', 'flame' + (i === 0 ? ' hint' : ''), '🔥');
         b.style.left = p.x + '%'; b.style.top = p.y + '%';
-        b.onclick = () => {
+        onTap(b, () => {
           if (b.classList.contains('out')) return;
           b.classList.add('out'); b.textContent = '💨'; tick();
           area.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
           if (++out === d.spots.length) win({ out });
-        };
+        });
         area.appendChild(b);
       });
       body.appendChild(area);
@@ -93,12 +107,12 @@ const Games = (() => {
       let on = 0;
       for (let i = 0; i < d.n; i++) {
         const b = h('button', 'sw' + (i === 0 ? ' hint' : ''), '<span class="lamp"></span>OFF');
-        b.onclick = () => {
+        onTap(b, () => {
           if (b.classList.contains('on')) return;
           b.classList.add('on'); b.innerHTML = '<span class="lamp"></span>ON'; tick();
           grid.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
           if (++on === d.n) win({ on });
-        };
+        });
         grid.appendChild(b);
       }
       body.appendChild(grid);
@@ -115,7 +129,7 @@ const Games = (() => {
       ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].forEach(k => {
         const b = h('button', k === '' ? 'blank' : '', k);
         if (k === d.code[0]) b.classList.add('hint');
-        b.onclick = () => {
+        onTap(b, () => {
           if (!k || done) return;
           pad.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
           if (k === '⌫') typed = typed.slice(0, -1);
@@ -125,7 +139,7 @@ const Games = (() => {
             if (typed === d.code) win({ code: typed });
             else { shake(slots); setTimeout(() => { typed = ''; draw(); }, 350); }
           }
-        };
+        });
         pad.appendChild(b);
       });
       body.append(show, slots, pad);
@@ -137,14 +151,14 @@ const Games = (() => {
       let next = 1; const seq = [];
       const btns = d.layout.map(n => {
         const b = h('button', '', String(n));
-        b.onclick = () => {
+        onTap(b, () => {
           if (b.classList.contains('ok')) return;
           if (n !== next) return shake(b);
           b.classList.add('ok'); b.classList.remove('hint'); seq.push(n); tick();
           next++;
           if (next > 9) return win({ seq });
           btns.find(x => x.textContent === String(next)).classList.add('hint');
-        };
+        });
         grid.appendChild(b);
         return b;
       });
@@ -199,7 +213,7 @@ const Games = (() => {
       ['red', 'blue', 'yellow'].forEach(c => {
         const b = h('div', 'bin', '');
         b.dataset.color = c; b.style.borderColor = COLOR[c]; b.style.background = COLOR[c] + '33';
-        b.onclick = () => drop(c);
+        onTap(b, () => drop(c));
         bottom.appendChild(b);
       });
       const drawQueue = () => {
@@ -256,7 +270,7 @@ const Games = (() => {
       d.holes.forEach(s => {
         const hole = h('div', 'hole', shapeSvg(s, false));
         hole.dataset.shape = s;
-        hole.onclick = () => { if (picked) put(picked, hole); };
+        onTap(hole, () => { if (picked) put(picked, hole); });
         holes.appendChild(hole);
       });
       const put = (piece, hole) => {
