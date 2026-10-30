@@ -126,7 +126,7 @@ function onChange(prev, v) {
   if (v.phase !== 'active' || v.paused || v.me.status === 'dead') Games.close();
   if (prev.phase !== v.phase) {
     if (v.phase !== 'active') Scanner.close();
-    if (v.phase === 'gathering') { vib([300, 100, 300, 100, 300]); S.secretOpen = false; }
+    if (v.phase === 'gathering') { vib([500, 150, 500, 150, 500, 150, 800]); S.secretOpen = false; meetingAlarm(v); }
     if (v.phase === 'voting' || v.phase === 'ended' || v.phase === 'briefing') vib(200);
     S.roleShown = false;
   }
@@ -156,11 +156,39 @@ async function handleScan(value) {
     openModal(`<div class="center"><div class="emoji">🚨</div><h2>${esc(r.name)} 님이 쓰러져 있습니다</h2>
       <p class="muted">직접 쓰러진 사람을 발견했을 때만 신고하세요.</p></div>
       <div class="btns" style="margin-top:16px"><button class="danger" data-act="report">시체 신고 → 회의 소집</button><button data-act="close">취소</button></div>`, {
-      report: async () => { closeModal(); const x = await act('report', { qr: value }); if (x) toast('신고했습니다. 집결 장소로 모이세요!', 'good'); },
+      report: () => askPlace(value),
     });
   } else if (r.kind === 'question') toast('표지를 보고 아래에서 답을 고르세요.', '', 3000);
   else if (r.kind === 'game') openGame(r.taskId, r.game, r.data);
   else toast(r.message || '확인했습니다.', '', 3000);
+}
+
+// 신고 전에 어디서 발견했는지 고르게 합니다. 회의 화면에 "📍 OO에서 발견"으로 나옵니다.
+function askPlace(qr) {
+  const places = (S.view && S.view.places) || [];
+  const send = async (place) => { closeModal(); const x = await act('report', { qr, place }); if (x) toast('신고했습니다. 집결 장소로 모이세요!', 'good'); };
+  openModal(`<h2>📍 어디서 발견했나요?</h2>
+    ${places.map((p, i) => `<button class="choice" data-act="p" data-i="${i}">${esc(p)}</button>`).join('')}
+    <button class="choice" data-act="none" style="border-style:dashed">잘 모르겠어요 / 장소 근처가 아님</button>`, {
+    p: (b) => send(places[Number(b.dataset.i)]),
+    none: () => send(null),
+  });
+}
+
+// 회의가 열리면 화면 전체로 크게 알립니다. 누르면 닫힙니다.
+function meetingAlarm(v) {
+  const m = v.meeting || {};
+  document.querySelectorAll('.alarm').forEach(x => x.remove());
+  const el = document.createElement('div');
+  el.className = 'alarm' + (m.trigger === 'report' ? ' body' : '');
+  el.innerHTML = `<div class="emoji">${m.trigger === 'report' ? '🚨' : '📢'}</div>
+    <div class="big">${m.trigger === 'report' ? '시체 발견!' : '긴급회의!'}</div>
+    <p>${m.trigger === 'report' ? `<b>${esc(m.body)}</b> 님이 쓰러져 있었습니다${m.where ? `<br>📍 ${esc(m.where)}` : ''}` : m.trigger === 'emergency' ? `<b>${esc(m.by)}</b> 님이 회의를 요청했습니다` : '진행자가 회의를 소집했습니다'}</p>
+    <div class="go">집결 장소<br><b>${esc(m.place)}</b></div>
+    <p class="small">화면을 누르면 닫힙니다</p>`;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 10000);
 }
 
 function openGame(taskId, game, data) {
@@ -327,15 +355,20 @@ function viewActive(v) {
   const me = v.me, pr = v.progress;
   const ghost = me.status === 'ghost';
   const emLeft = serverNow() < v.emergencyReadyAt;
-  const mafiaPanel = v.mafia && me.status === 'alive' ? `
-    <div class="card" style="border-color:${S.secretOpen ? 'var(--bad)' : 'var(--line)'}">
-      <button class="ghostbtn sm" data-a="toggleSecret" style="width:100%">${S.secretOpen ? '비밀 메뉴 닫기' : '비밀 메뉴 열기'}</button>
-      ${S.secretOpen ? `
+  // 비밀 메뉴는 살아 있는 모두에게 똑같이 보입니다. 닫힌 상태로는 마피아인지 알 수 없고,
+  // 시민이 열면 위장용 기지 상태 화면이 나옵니다.
+  const secretInner = !S.secretOpen ? '' : v.mafia ? `
         <p class="small" style="margin-top:10px">동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
         ${(() => {
           const ready = v.mafia.killReadyAt <= serverNow() && !v.paused;
           return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} style="margin-top:8px">${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
-        })()}` : ''}
+        })()}`
+    : `<p class="small" style="margin-top:10px">🛰 기지 상태: <b style="color:var(--good)">정상</b></p>
+        <button class="danger" data-a="scanArea" style="margin-top:8px">🔦 주변 살피기</button>`;
+  const secretPanel = me.status === 'alive' ? `
+    <div class="card">
+      <button class="ghostbtn sm" data-a="toggleSecret" style="width:100%">${S.secretOpen ? '비밀 메뉴 닫기' : '비밀 메뉴 열기'}</button>
+      ${secretInner}
     </div>` : '';
   return `
     ${ghost ? '<div class="card" style="border-color:#34407a;background:#141a33"><b>👻 유령 상태</b><p class="small muted">말하거나 힌트를 주지 마세요. 임무는 계속 진행률에 반영됩니다(시민).</p></div>' : ''}
@@ -345,7 +378,7 @@ function viewActive(v) {
       <div class="progress" style="margin-top:8px"><div style="width:${Math.min(100, pr.pct)}%"></div></div>
       <p class="small muted">목표 ${pr.goal}% 달성 시 시민 승리</p>
     </div>
-    ${mafiaPanel}
+    ${secretPanel}
     ${roleBlock(v, true)}
     ${!ghost ? `<div class="card">
       <button class="ghostbtn" data-a="emergency" data-needs-online ${me.emergencyLeft <= 0 || emLeft ? 'data-off="1"' : ''}>
@@ -369,7 +402,7 @@ function viewDead() {
 
 function meetingHead(v) {
   const m = v.meeting || {};
-  const why = m.trigger === 'report' ? `🚨 <b>${esc(m.by)}</b> 님이 <b>${esc(m.body)}</b> 님을 발견해 신고했습니다.`
+  const why = m.trigger === 'report' ? `🚨 <b>${esc(m.by)}</b> 님이 <b>${esc(m.body)}</b> 님을 발견해 신고했습니다.${m.where ? `<br>📍 발견 장소: <b>${esc(m.where)}</b>` : ''}`
     : m.trigger === 'emergency' ? `📢 <b>${esc(m.by)}</b> 님이 긴급회의를 요청했습니다.`
     : '📢 진행자가 회의를 소집했습니다.';
   return `<p>${why}</p>
@@ -451,6 +484,7 @@ app.addEventListener('click', (e) => {
   if (a === 'ack') return act('ack');
   if (a === 'scan') return openScan();
   if (a === 'kill') return openKill();
+  if (a === 'scanArea') return toast('🔦 주변에 이상한 점이 없습니다.', '', 2500);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
   if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge); }

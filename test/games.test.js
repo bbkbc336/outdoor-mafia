@@ -77,5 +77,12 @@ const mr = G.scan(room, m, ml.code, seq()); clock += 3000;
 G.play(room, m, mt.id, right(mr.game, mr.data), seq());
 ok(mt.done && G.progress(room).done === before, '마피아도 같은 게임을 하지만 진행률에는 반영 안 됨');
 
+console.log('\n[신고 발견 장소]');
+const victim = G.list(room).find(x => x.role === 'citizen' && x.id !== q.id && x.status === 'alive');
+clock += 600000;
+G.kill(room, m, victim.id, seq());
+G.report(room, q, victim.code, seq(), '<script>없는 장소</script>');
+ok(G.playerView(room, q).meeting.where === null, '장소 목록에 없는 이름은 표시하지 않음');
+
 console.log(`\n결과: ${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);

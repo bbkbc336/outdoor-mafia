@@ -154,14 +154,16 @@ async function main() {
     ok(sc.result.kind === 'body' && sc.result.canReport, '시체 이름표 스캔 → 신고 가능');
     const seqBefore = sse[cit[1]].last.seq;
     const [r1, r2, r3] = await Promise.all([
-      post('/api/act', { code, token: tk(cit[1]), action: 'report', qr: bodyCode, seq: seqBefore }),
-      post('/api/act', { code, token: tk(cit[2]), action: 'report', qr: bodyCode, seq: seqBefore }),
+      post('/api/act', { code, token: tk(cit[1]), action: 'report', qr: bodyCode, seq: seqBefore, place: hv.locations[1].name }),
+      post('/api/act', { code, token: tk(cit[2]), action: 'report', qr: bodyCode, seq: seqBefore, place: hv.locations[1].name }),
       post('/api/act', { code, token: tk(cit[3]), action: 'emergency', seq: seqBefore }),
     ]);
     ok([r1, r2, r3].filter(r => r.status === 200).length === 1, '[기준 5] 동시 신고·긴급회의 → 집결 한 번만 시작');
     await sleep(200);
     hv = (await post('/api/state', { code, token: H })).view;
     ok(hv.phase === 'gathering' && hv.meeting.revealed.includes(killedFirst), '집결 시 사망자 공개');
+    ok(hv.meeting.trigger !== 'report' || (hv.meeting.where === hv.locations[1].name && sse[cit[4]].last.meeting.where === hv.locations[1].name), '신고자가 고른 발견 장소가 회의 화면에 표시');
+    ok(sse[cit[4]].last.places.length === hv.locations.length, '참가자는 발견 장소 목록을 받음');
     ok(sse[cit[4]].last.roster.find(r => r.name === killedFirst).pub === 'dead', '회의에서 사망자가 모두에게 공개됨');
     const gk = await act(loser, 'kill', { target: idOf(cit[2]) });
     ok(gk.status === 400, '[기준 4] 회의 중 암살 거부');

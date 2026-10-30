@@ -150,7 +150,7 @@ function tabRun(v) {
   } else if (['gathering', 'discussion'].includes(v.phase)) {
     const m = v.meeting || {};
     main = `<div class="card hl"><div class="phase">${v.phase === 'gathering' ? '회의 집결' : '토론'}</div>
-        <p>${m.trigger === 'report' ? `🚨 ${esc(m.by)} → ${esc(m.body)} 신고` : m.trigger === 'emergency' ? `📢 ${esc(m.by)} 긴급회의` : '📢 진행자 소집'}</p>
+        <p>${m.trigger === 'report' ? `🚨 ${esc(m.by)} → ${esc(m.body)} 신고${m.where ? ` (📍 ${esc(m.where)})` : ''}` : m.trigger === 'emergency' ? `📢 ${esc(m.by)} 긴급회의` : '📢 진행자 소집'}</p>
         <p>공개된 탈락자: <b>${(m.revealed || []).map(esc).join(', ') || '없음'}</b></p>
         <p class="small muted">집결 장소: ${esc(m.place)}</p>
         ${v.phase === 'discussion' ? `<div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}</div>
@@ -318,7 +318,7 @@ function syncLocDraft() {
 
 const LOG_FMT = {
   assign: (l) => `역할 배정 (마피아: ${l.mafia.join(', ')})`, start: () => '게임 시작',
-  kill: (l) => `🔪 ${l.by} → ${l.target} 암살`, report: (l) => `🚨 ${l.by}이(가) ${l.body} 신고 (공개: ${l.revealed.join(', ') || '없음'})`,
+  kill: (l) => `🔪 ${l.by} → ${l.target} 암살`, report: (l) => `🚨 ${l.by}이(가) ${l.body} 신고${l.where ? ' @' + l.where : ''} (공개: ${l.revealed.join(', ') || '없음'})`,
   emergency: (l) => `📢 ${l.by} 긴급회의 (공개: ${l.revealed.join(', ') || '없음'})`, hostMeeting: (l) => `📢 진행자 회의 소집 (공개: ${l.revealed.join(', ') || '없음'})`,
   task: (l) => `✅ ${l.by}(${ROLE_NAME[l.role]}${l.status !== 'alive' ? '·유령' : ''}) 임무 완료`,
   vote: (l) => `🗳 ${l.by} → ${l.target}`, voteResult: (l) => `투표 결과: ${l.why}`,
