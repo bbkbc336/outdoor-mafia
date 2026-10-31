@@ -256,9 +256,9 @@ function tabPlaces(v) {
       <p class="small muted">장소 QR은 번호(01, 02…)로 고정이라 이름을 바꿔도 다시 출력할 필요가 없습니다.</p></div>
     <div class="card"><h3>이름이 정해지기 전에 미리 출력</h3>
       <p class="small muted">번호만 찍힌 QR입니다. 방 코드가 들어가지 않아 다음 행사에도 그대로 씁니다.</p>
-      <div class="row"><a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank">장소 01~10</a><a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank">이름표 01~40</a></div>
-      <div class="row"><a class="btn" href="${printBase}&what=blankTags&n=40&back=1" target="_blank">이름표 01~40 + 뒷면 (양면)</a><a class="btn" href="${printBase}&what=tagBacks&n=40" target="_blank">이름표 뒷면만</a></div>
-      <p class="small muted">이름표 뒷면에는 이름만 크게 적는 칸이 있습니다. 양면 인쇄는 '긴 가장자리로 넘기기'로 하세요.</p>
+      <div class="row"><a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank">장소 01~10</a><a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank">이름표 01~40 (양면)</a></div>
+      <div class="row"><a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank">이름표 앞면만</a><a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank">이름표 뒷면만</a></div>
+      <p class="small muted">이름표 앞면은 이름 적는 칸, 뒷면은 💀 사망 표시와 QR입니다. 양면 인쇄('긴 가장자리로 넘기기')로 뽑고, 양면 프린터가 없으면 앞면을 뽑은 종이를 뒤집어 넣고 뒷면을 뽑으세요.</p>
       <p class="small muted">새 장소는 비어 있는 가장 작은 번호를 받고, 장소를 지워도 다른 장소 번호는 바뀌지 않습니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">

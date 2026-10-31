@@ -312,7 +312,7 @@ function viewLobby(v) {
     </div>
     ${v.me.tag
       ? `<div class="card good center"><h3>내 이름표</h3><div class="big">🏷 ${String(v.me.tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 목걸이를 차세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
-      : `<div class="card hl center"><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표의 QR을 찍으세요.</p>
+      : `<div class="card hl center"><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표 뒷면의 QR을 찍으세요.</p>
           <button class="primary" data-a="scan" data-needs-online>📷 내 이름표 QR 찍기</button></div>`}
     <div class="card">
       <h3>복구 코드</h3>
@@ -332,7 +332,7 @@ function rulesCard() {
     <ul class="small" style="padding-left:20px">
       <li><b>시민</b>: 장소 QR을 찍어 임무를 하고, 회의에서 마피아를 찾아 추방합니다. 임무를 모두 끝내거나 마피아를 모두 추방하면 승리.</li>
       <li><b>마피아</b>: 위장 임무를 하며 몰래 암살합니다. 살아 있는 마피아 수가 시민 수 이상이 되면 승리.</li>
-      <li><b>암살</b>: 손이 닿는 거리에서 상대를 직접 보고 있을 때만. 당한 사람은 그 자리에 멈추고 말하지 않습니다.</li>
+      <li><b>암살</b>: 손이 닿는 거리에서 상대를 직접 보고 있을 때만. 당한 사람은 이름표를 뒤집어 💀 면이 보이게 하고, 그 자리에 멈춰 말하지 않습니다.</li>
       <li><b>신고</b>: 쓰러진 사람의 이름표 QR을 찍으면 회의가 열립니다. 직접 발견했을 때만 찍으세요.</li>
       <li><b>유령</b>: 회의 후 탈락자는 유령으로 임무만 계속합니다. 말하거나 힌트를 주면 안 됩니다.</li>
     </ul></details>`;
@@ -430,7 +430,7 @@ function viewDead() {
     <div class="big">당신은 쓰러졌습니다</div>
     <div class="card danger" style="text-align:left">
       <p>• <b>지금부터 말하지 마세요.</b></p>
-      <p>• 이 자리에서 이름표가 보이게 하고 발견될 때까지 기다리세요.</p>
+      <p>• 이름표를 뒤집어 <b>💀 사망 면(QR)</b>이 보이게 하고, 이 자리에서 발견될 때까지 기다리세요.</p>
       <p>• 다른 곳에서 회의가 열리면 집결 장소로 이동하세요.</p>
       <p>• 회의가 끝나면 유령으로 임무를 이어 갑니다.</p>
     </div>
