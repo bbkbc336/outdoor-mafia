@@ -205,11 +205,19 @@ function openGame(taskId, game, data, readyAt) {
 
 function openScan() { Scanner.open(S.view && S.view.phase === 'lobby' ? '내 목걸이 이름표 QR' : '장소 QR 또는 쓰러진 사람의 이름표', handleScan); }
 
+// 암살 성공: 마피아 화면만 붉게 한 번 반짝입니다.
+function killFlash() {
+  const f = document.createElement('div');
+  f.className = 'killflash';
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 900);
+}
+
 function openKill() {
   const v = S.view, m = v.mafia;
   if (!m.targets.length) return toast('선택할 수 있는 대상이 없습니다.', 'bad');
   openModal(`<h2>🔪 대상 선택</h2>
-    <p class="muted small">약 3m 안에서 상대를 직접 보고 있을 때만 실행하세요. 앱은 거리를 확인하지 않습니다.</p>
+    <p class="muted small">손이 닿는 거리에서 상대를 직접 보고 있을 때만 실행하세요. 앱은 거리를 확인하지 않습니다.</p>
     ${m.targets.map(t => `<button class="choice" data-act="pick" data-id="${esc(t.id)}" data-name="${esc(t.name)}">${esc(t.name)}</button>`).join('')}
     <button data-act="close" style="margin-top:16px">취소</button>`, {
     pick: async (b) => {
@@ -217,13 +225,13 @@ function openKill() {
       const yes = await confirmBox(`${b.dataset.name} 님을 암살합니까?`, '실행하면 되돌릴 수 없습니다.', '암살 실행', true);
       if (!yes) return;
       const r = await act('kill', { target: b.dataset.id });
-      if (r) toast(`${r.targetName} 님을 암살했습니다. 자연스럽게 자리를 떠나세요.`, 'good', 3500);
+      if (r) { killFlash(); toast(`${r.targetName} 님을 암살했습니다. 자연스럽게 자리를 떠나세요.`, 'good', 3500); }
     },
   });
 }
 
 async function doEmergency() {
-  const yes = await confirmBox('긴급회의를 요청합니까?', `남은 횟수 ${S.view.me.emergencyLeft}회. 모두가 집결 장소로 모입니다.`, '긴급회의 요청', true);
+  const yes = await confirmBox('긴급회의를 요청합니까?', `이번 판 전체에서 남은 횟수 ${S.view.me.emergencyLeft}회. 모두가 집결 장소로 모입니다.`, '긴급회의 요청', true);
   if (!yes) return;
   const r = await act('emergency');
   if (r) toast('긴급회의를 요청했습니다.', 'good');
@@ -321,7 +329,7 @@ function rulesCard() {
     <ul class="small" style="padding-left:20px">
       <li><b>시민</b>: 장소 QR을 찍어 임무를 하고, 회의에서 마피아를 찾아 추방합니다. 임무를 모두 끝내거나 마피아를 모두 추방하면 승리.</li>
       <li><b>마피아</b>: 위장 임무를 하며 몰래 암살합니다. 살아 있는 마피아 수가 시민 수 이상이 되면 승리.</li>
-      <li><b>암살</b>: 약 3m 안에서 상대를 직접 보고 있을 때만. 당한 사람은 그 자리에 멈추고 말하지 않습니다.</li>
+      <li><b>암살</b>: 손이 닿는 거리에서 상대를 직접 보고 있을 때만. 당한 사람은 그 자리에 멈추고 말하지 않습니다.</li>
       <li><b>신고</b>: 쓰러진 사람의 이름표 QR을 찍으면 회의가 열립니다. 직접 발견했을 때만 찍으세요.</li>
       <li><b>유령</b>: 회의 후 탈락자는 유령으로 임무만 계속합니다. 말하거나 힌트를 주면 안 됩니다.</li>
     </ul></details>`;
@@ -346,7 +354,7 @@ function viewBriefing(v) {
     ${roleBlock(v)}
     <div class="card">
       ${role === 'mafia'
-        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>암살은 <b>약 3m 안에서 직접 보고 있을 때만</b>. 대기시간이 있습니다.</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
+        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>암살은 <b>손이 닿는 거리에서 직접 보고 있을 때만</b>. 대기시간이 있습니다.</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
         : `<p><b>시민 할 일</b></p><ul class="small" style="padding-left:20px"><li>안내되는 장소로 가서 QR을 찍어 임무를 완료하세요.</li><li>쓰러진 사람을 발견하면 이름표 QR로 신고하세요.</li><li>회의에서 수상한 사람을 찾아 투표하세요.</li></ul>`}
     </div>
     ${v.me.ack ? '<div class="card good center">✔ 확인 완료. 진행자가 시작할 때까지 기다리세요.</div>'
@@ -408,7 +416,7 @@ function viewActive(v) {
     ${roleBlock(v, true)}
     ${!ghost ? `<div class="card">
       <button class="ghostbtn" data-a="emergency" data-needs-online ${me.emergencyLeft <= 0 || emLeft ? 'data-off="1"' : ''}>
-        📢 긴급회의 ${me.emergencyLeft <= 0 ? '(사용 완료)' : emLeft ? `<span data-until="${v.emergencyReadyAt}" data-unit="kr" data-suffix=" 후 가능" data-done="rerender"></span>` : `(남은 ${me.emergencyLeft}회)`}
+        📢 긴급회의 ${me.emergencyLeft <= 0 ? '(모두 사용됨)' : emLeft ? `<span data-until="${v.emergencyReadyAt}" data-unit="kr" data-suffix=" 후 가능" data-done="rerender"></span>` : `(전체 남은 ${me.emergencyLeft}회)`}
       </button></div>` : ''}
     <div class="dock"><div class="inner"><button class="primary" data-a="scan" data-needs-online>📷 QR 스캔 / 코드 입력</button></div></div>`;
 }

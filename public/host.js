@@ -221,7 +221,7 @@ function tabPlayers(v) {
 const SETTING_FIELDS = [
   ['mafiaCount', '마피아 수', '명'], ['tasksPerPlayer', '1인당 임무 수', '개'], ['taskGoalPct', '시민 임무 승리 목표', '%'],
   ['killCooldown', '암살 대기시간', '초'], ['startProtect', '시작 직후 암살 보호', '초'], ['resumeProtect', '회의 후 암살 보호', '초'],
-  ['emergencyPerPlayer', '긴급회의 1인당 횟수', '회'], ['emergencyCooldown', '긴급회의 대기 (시작·재개 후)', '초'],
+  ['emergencyTotal', '긴급회의 횟수 (모두 합쳐서)', '회'], ['emergencyCooldown', '긴급회의 대기 (시작·재개 후)', '초'],
   ['gatherSec', '회의 집결 제한 (0=직접 시작)', '초'], ['discussionSec', '토론 시간', '초'], ['voteSec', '투표 시간', '초'],
 ];
 function tabSettings(v) {

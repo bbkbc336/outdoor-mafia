@@ -321,3 +321,7 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
   .cards .card9.ok { animation: m-pop 0.3s ease-out; }
   @keyframes m-flip { from { scale: 0 1; } }
 }
+
+/* 암살 성공 시 마피아 화면이 붉게 한 번 반짝임 */
+.killflash { position: fixed; inset: 0; z-index: 95; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255, 40, 60, 0.25), rgba(200, 0, 25, 0.85)); animation: killflash 0.8s ease-out forwards; }
+@keyframes killflash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }

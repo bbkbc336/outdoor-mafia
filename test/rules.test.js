@@ -275,8 +275,8 @@ async function main() {
     // 긴급회의 → 마피아 1명 추방
     const em = await act(cit[2], 'emergency');
     ok(em.status === 200, '긴급회의 요청');
-    const em2 = await act(cit[2], 'emergency');
-    ok(em2.status === 400, '긴급회의 1인 1회 제한');
+    const em2 = await act(cit[3], 'emergency');
+    ok(em2.status === 400, '회의 중에는 긴급회의 거부');
     await host('vote');
     await sleep(150);
     const voters = names.filter(n => n !== killedFirst);

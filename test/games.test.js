@@ -96,6 +96,26 @@ clock += G.DEFAULT_SETTINGS.gatherSec * 1000;
 G.tick(room);
 ok(room.phase === 'discussion', '집결 시간이 끝나면 자동으로 토론 시작');
 
+console.log('\n[긴급회의는 한 판 전체 합계]');
+{
+  const em = G.createRoom(new Set());
+  ['가', '나', '다', '라', '마', '바'].forEach(n => G.join(em, n));
+  G.assignTags(em);
+  G.updateSettings(em, { mafiaCount: 1, emergencyTotal: 2, emergencyCooldown: 0, startProtect: 0 });
+  G.assignRoles(em); G.startGame(em, true);
+  const cs = G.list(em).filter(x => x.role === 'citizen');
+  const round = (p) => { G.emergency(em, p, em.phaseSeq); G.startVoting(em); G.closeVoting(em); G.resumeActivity(em); };
+  ok(G.playerView(em, cs[0]).me.emergencyLeft === 2, '시작 시 전체 2회');
+  round(cs[0]);
+  ok(G.playerView(em, cs[1]).me.emergencyLeft === 1, '한 사람이 쓰면 모두의 남은 횟수가 줄어듦');
+  round(cs[0]);
+  ok(G.playerView(em, cs[2]).me.emergencyLeft === 0, '같은 사람이 두 번 써도 전체에서 차감');
+  throws(() => G.emergency(em, cs[2], em.phaseSeq), /모두 썼습니다/, '전체 횟수를 다 쓰면 다른 사람도 거부');
+  G.newGame(em); G.assignRoles(em);
+  ok(G.playerView(em, cs[0]).me.emergencyLeft === 2, '새 판이면 다시 채워짐');
+}
+ok(G.DEFAULT_SETTINGS.emergencyTotal === 4, '기본 긴급회의는 전체 4회');
+
 console.log('\n[기본값]');
 const d = G.DEFAULT_SETTINGS;
 ok(d.mafiaCount === 5 && d.tasksPerPlayer === 3 && d.taskGoalPct === 80 && d.killCooldown === 60 && d.discussionSec === 120, '1시간 진행용 기본값');
