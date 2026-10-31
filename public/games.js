@@ -47,8 +47,9 @@ const Games = (() => {
     onTap(root.querySelector('.gx'), close);
     document.body.appendChild(root);
     const body = root.querySelector('.gbody');
+    const mine = root; // 이 게임 창. 닫히거나 다른 게임이 열리면 이 게임의 늦은 동작은 무시합니다.
     const win = (result) => {
-      if (done) return;
+      if (done || root !== mine) return;
       done = true; buzz([60, 40, 120]);
       // 완료: 체크 표시와 함께 반짝이가 사방으로 튑니다.
       const w = h('div', 'gwin', '✅');
@@ -60,8 +61,10 @@ const Games = (() => {
         w.appendChild(sp);
       }
       body.appendChild(w);
-      setTimeout(() => { close(); onWin(result); }, 700);
+      // 완료 표시 동안 다른 게임을 열었으면 그 창은 닫지 않습니다. 결과는 그대로 보냅니다.
+      setTimeout(() => { if (root === mine) close(); onWin(result); }, 700);
     };
+    win.alive = () => root === mine && !done;
     const step = root.querySelector('.gstep');
     win.step = (t) => {
       if (step.textContent === t) return;
@@ -126,7 +129,7 @@ const Games = (() => {
           if (relit < 4 && out % 3 === 0) {
             relit++;
             setTimeout(() => {
-              if (done) return;
+              if (!win.alive()) return;
               const dead = flames.filter(f => f.hp <= 0 && f !== b);
               const f = dead[Math.floor(Math.random() * dead.length)];
               if (!f) return;
@@ -485,7 +488,7 @@ const Games = (() => {
             // 짝이면 뒤집히는 모습을 다 보여 준 뒤 초록 테두리와 ✓로 표시
             pairs.push([a, b]); lock = true;
             setTimeout(() => {
-              if (done || !root) return;
+              if (!win.alive()) return;
               [a, b].forEach(j => grid.children[j].classList.add('ok'));
               tick(); lock = false;
               win.step(`${pairs.length}/${d.deck.length / 2}`);

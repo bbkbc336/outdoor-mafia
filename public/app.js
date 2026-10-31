@@ -126,6 +126,8 @@ function onChange(prev, v) {
   }
   // 활동이 멈추면(회의·정지·사망) 하던 미니게임도 닫습니다. 다시 QR을 찍으면 새로 시작합니다.
   if (v.phase !== 'active' || v.paused || v.me.status === 'dead') Games.close();
+  // 진행자가 대신 완료하는 등 지금 임무가 바뀌었으면, 열려 있던 그 임무의 게임도 닫습니다.
+  if (S.gameTask && (!v.me.task || v.me.task.id !== S.gameTask)) { Games.close(); S.gameTask = null; }
   if (prev.phase !== v.phase) {
     if (v.phase !== 'active') Scanner.close();
     if (v.phase === 'gathering') { vib([500, 150, 500, 150, 500, 150, 800]); S.secretOpen = false; meetingAlarm(v); }
@@ -194,6 +196,7 @@ function meetingAlarm(v) {
 }
 
 function openGame(taskId, game, data, readyAt) {
+  S.gameTask = taskId;
   Games.open({ game, data }, async (result) => {
     // 서버가 받는 최소 시간 전이면 잠깐 기다렸다 보냅니다.
     const wait = (readyAt || 0) - serverNow() + 300;

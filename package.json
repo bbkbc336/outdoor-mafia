@@ -7,7 +7,11 @@
   "scripts": {
     "start": "node server.js",
     "test": "node test/rules.test.js && node test/missions.test.js && node test/games.test.js",
-    "test:redis": "node -e \"process.env.TEST_REDIS=1;require('./test/rules.test.js')\""
+    "test:redis": "node -e \"process.env.TEST_REDIS=1;require('./test/rules.test.js')\"",
+    "test:e2e": "node test/e2e/playthrough.js",
+    "test:edge": "node test/e2e/edgecases.js"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }
