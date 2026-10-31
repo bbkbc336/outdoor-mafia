@@ -434,7 +434,7 @@ const Games = (() => {
       body.append(pieces, h('div', 'arrow', '⬇'), holes);
     },
 
-    // 9. 구멍에서 튀어나온 쥐를 눌러 잡기. 놓친 쥐는 들어가고 다음 쥐가 나옵니다.
+    // 9. 구멍에서 튀어나온 쥐 20마리를 눌러 잡기. 놓친 쥐는 들어가고 다음 쥐가 나옵니다.
     mole(body, d, win) {
       const grid = h('div', 'ggrid g3 mole');
       const mine = root;
@@ -470,7 +470,7 @@ const Games = (() => {
 
     // 10. 카드를 두 장씩 뒤집어 같은 그림 찾기. 다르면 잠깐 보여 주고 다시 덮습니다.
     cards(body, d, win) {
-      const grid = h('div', 'ggrid g3 cards');
+      const grid = h('div', 'ggrid g4 cards');
       const pairs = []; let open = [], lock = false;
       d.deck.forEach((ic, i) => {
         const c = h('button', 'card9' + (i === 0 ? ' hint' : ''), `<span>${ic}</span>`);

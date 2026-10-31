@@ -70,12 +70,14 @@ async function playGame(page) {
     throw new Error(`${page.label} 미니게임 화면 안 열림: ` + JSON.stringify(await page.evaluate(() => ({ url: location.href, ev: (window.__ev || []).slice(-15), toast: (document.querySelector('.toast') || {}).textContent, modal: (document.querySelector('.modal') || {}).innerText, scanner: !!document.querySelector('#scanner'), task: S.view && S.view.me.task }))));
   }
   const title = await g.locator('.ghead b').innerText();
+  await sleep(400); // 게임 화면이 올라오는 움직임(0.25초)이 끝난 뒤 누르기
   const won = async () => (await g.locator('.gwin').count()) > 0 || !(await g.count());
   if (await g.locator('.flame').count()) {
     // 세 번씩 눌러야 꺼지고, 꺼진 불이 다시 붙기도 합니다.
     for (let k = 0; k < 80 && !(await won()); k++) {
       const f = g.locator('.flame:not(.out)').first();
-      if (await f.count()) await f.tap(); else await sleep(300);
+      // 불꽃은 계속 일렁여서 멈추길 기다리지 않고 바로 누릅니다.
+      if (await f.count()) await f.tap({ force: true, timeout: 2000 }).catch(() => {}); else await sleep(300);
     }
   } else if (await g.locator('.wires').count()) {
     // 왼쪽 점을 같은 색 오른쪽 점까지 끌기
@@ -149,7 +151,7 @@ async function playGame(page) {
     // 튀어나온 쥐를 보이는 대로 누르기
     for (let i = 0; i < 400 && !(await won()); i++) {
       const m = g.locator('.hole9.up:not(.hit)').first();
-      if (await m.count()) await m.tap({ timeout: 1000 }).catch(() => {}); else await sleep(80);
+      if (await m.count()) await m.tap({ force: true, timeout: 1000 }).catch(() => {}); else await sleep(80);
     }
   } else if (await g.locator('.cards').count()) {
     // 카드 그림을 읽어 짝끼리 차례로 뒤집기
@@ -159,7 +161,7 @@ async function playGame(page) {
       if (seen.has(i)) continue;
       const j = icons.indexOf(icons[i], i + 1);
       seen.add(i); seen.add(j);
-      await g.locator('.card9').nth(i).tap(); await g.locator('.card9').nth(j).tap();
+      await g.locator('.card9').nth(i).tap({ force: true }); await g.locator('.card9').nth(j).tap({ force: true });
       await sleep(150);
     }
   } else if (await g.locator('.piece').count()) {

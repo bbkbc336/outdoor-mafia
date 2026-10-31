@@ -170,6 +170,7 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .ggrid.g2 { grid-template-columns: 1fr 1fr; }
 .ggrid.g3 { grid-template-columns: 1fr 1fr 1fr; }
 .ggrid.g5 { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.ggrid.g4 { grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .garea { position: relative; flex: 1; min-height: 320px; border-radius: 20px; overflow: hidden; }
 .garea.fire { background: radial-gradient(circle at 50% 60%, #3a2a1a, #141820 70%); border: 2px solid var(--line); }
 .flame { position: absolute; transform: translate(-50%, -50%); width: 64px !important; min-height: 64px !important; padding: 0; transition: font-size 0.1s; border-radius: 50%; background: rgba(255,120,40,0.18); border: 0; }
@@ -260,7 +261,7 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .mole .hole9.up span { bottom: 14%; }
 .mole .hole9.hit span { transform: scale(1.2); }
 /* 카드 짝 맞추기 */
-.cards .card9 { min-height: 0; aspect-ratio: 3 / 4; padding: 0; font-size: 44px; background: repeating-linear-gradient(45deg, #2d6fc0 0 10px, #4da3ff 10px 20px); border-color: #2d6fc0; transition: transform 0.15s; }
+.cards .card9 { min-height: 0; aspect-ratio: 3 / 4; padding: 0; font-size: 40px; background: repeating-linear-gradient(45deg, #2d6fc0 0 10px, #4da3ff 10px 20px); border-color: #2d6fc0; transition: transform 0.15s; }
 .cards .card9 span { visibility: hidden; }
 .cards .card9.up { background: var(--panel2); border-color: var(--accent); transform: scale(1.03); }
 .cards .card9.up span { visibility: visible; }
