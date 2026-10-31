@@ -13,7 +13,7 @@
     if (document.getElementById('kakaoOut')) return;
     var d = document.createElement('div');
     d.id = 'kakaoOut';
-    d.setAttribute('style', 'position:fixed;inset:0;z-index:100;background:#0d0f14;color:#f4f6fb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font:18px/1.5 system-ui,sans-serif');
+    d.setAttribute('style', 'position:fixed;inset:0;z-index:100;background:#0d0f14;color:#f4f6fb;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;font:18px/1.5 system-ui,sans-serif;word-break:keep-all;overflow-wrap:break-word');
     d.innerHTML = '<div style="font-size:56px">🌐</div>'
       + '<b style="font-size:22px">외부 브라우저에서 열어 주세요</b>'
       + '<p style="margin:0;color:#a3abbf">카카오톡 안에서는 카메라와 화면 유지가 잘 되지 않습니다.</p>'
