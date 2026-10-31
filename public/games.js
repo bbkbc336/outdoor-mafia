@@ -1,4 +1,4 @@
-// 임무 미니게임 8종. 설명 없이 화면만 보고 알 수 있게: 목표가 보이고, 조작은 한 가지, 첫 동작은 반짝임.
+// 임무 미니게임 10종. 설명 없이 화면만 보고 알 수 있게: 목표가 보이고, 조작은 한 가지, 첫 동작은 반짝임.
 // 한 판은 약 20초 분량입니다(한 번에 끝나는 한 판, 양과 난이도로 조절). 머리글 오른쪽에 진행 상황이 보입니다.
 // Games.open({ game, data }, onWin(result)) — 문제(data)는 서버가 만들고, 결과는 서버가 다시 확인합니다.
 'use strict';
@@ -13,6 +13,8 @@ const Games = (() => {
     sort: '📦 같은 색 칸으로 옮기세요',
     level: '⚡ 막대를 점선에 맞추세요',
     shape: '🧩 같은 모양·색에 끼우세요',
+    mole: '🐭 튀어나온 쥐를 누르세요',
+    cards: '🃏 같은 그림 두 장을 찾으세요',
   };
   const COLOR = { red: '#ff4d5e', blue: '#4da3ff', yellow: '#ffd23f', green: '#3ddc84' };
   const shake = (el) => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); buzz([40, 40, 40]); };
@@ -48,11 +50,25 @@ const Games = (() => {
     const win = (result) => {
       if (done) return;
       done = true; buzz([60, 40, 120]);
-      body.appendChild(h('div', 'gwin', '✅'));
+      // 완료: 체크 표시와 함께 반짝이가 사방으로 튑니다.
+      const w = h('div', 'gwin', '✅');
+      for (let i = 0; i < 16; i++) {
+        const a = i / 16 * Math.PI * 2, dist = 120 + Math.random() * 90;
+        const sp = h('span', 'spark', ['✨', '🎉', '⭐', '💚'][i % 4]);
+        sp.style.setProperty('--dx', Math.cos(a) * dist + 'px'); sp.style.setProperty('--dy', Math.sin(a) * dist + 'px');
+        sp.style.setProperty('--r', (Math.random() * 360 - 180) + 'deg');
+        w.appendChild(sp);
+      }
+      body.appendChild(w);
       setTimeout(() => { close(); onWin(result); }, 700);
     };
     const step = root.querySelector('.gstep');
-    win.step = (t) => { step.textContent = t; };
+    win.step = (t) => {
+      if (step.textContent === t) return;
+      const first = !step.textContent;
+      step.textContent = t;
+      if (!first) { step.classList.remove('bump'); void step.offsetWidth; step.classList.add('bump'); }
+    };
     (BUILD[info.game] || (() => { body.textContent = '알 수 없는 게임입니다.'; }))(body, info.data || {}, win);
   }
 
@@ -153,7 +169,7 @@ const Games = (() => {
         if (!r || r.classList.contains('done') || l.classList.contains('done')) return;
         if (r.dataset.c !== l.dataset.c) return shake(r);
         l.classList.add('done'); r.classList.add('done');
-        line(l.dataset.c, mid(l), mid(r));
+        line(l.dataset.c, mid(l), mid(r)).classList.add('fresh');
         links.push([Number(l.dataset.i), Number(r.dataset.i)]); tick();
         win.step(`${links.length}/${d.left.length}`);
         if (links.length === d.left.length) win({ links });
@@ -221,6 +237,7 @@ const Games = (() => {
         rot = Math.round(rot / STEP) * STEP; dial.classList.add('snap'); draw();
         if (under() !== d.code[k]) return;
         goal.children[k].classList.add('ok'); tick();
+        now.classList.remove('ok'); void now.offsetWidth; now.classList.add('ok');
         if (++k === d.code.length) return win({ seq: d.code.slice() });
       };
       dial.addEventListener('pointerup', up); dial.addEventListener('pointercancel', up);
@@ -290,7 +307,7 @@ const Games = (() => {
           checkAt = Date.now() + 150;
           const c = cleaned();
           win.step(Math.min(100, Math.floor(c / 0.88 * 100)) + '%');
-          if (c >= 0.88) { g.clearRect(0, 0, W, H); win({ clean: c }); }
+          if (c >= 0.88) { g.clearRect(0, 0, W, H); area.classList.add('clean'); win({ clean: c }); }
         }
       });
       const end = () => { last = null; };
@@ -326,6 +343,7 @@ const Games = (() => {
         bins.push(c); i++; tick();
         const bin = bottom.querySelector(`[data-color="${c}"]`);
         bin.textContent = '📦'.repeat(Math.min(6, bins.filter(x => x === c).length));
+        bin.classList.remove('got'); void bin.offsetWidth; bin.classList.add('got');
         drawQueue();
         if (i === d.boxes.length) win({ bins });
       };
@@ -414,6 +432,69 @@ const Games = (() => {
       });
       win.step(`0/${d.holes.length}`);
       body.append(pieces, h('div', 'arrow', '⬇'), holes);
+    },
+
+    // 9. 구멍에서 튀어나온 쥐를 눌러 잡기. 놓친 쥐는 들어가고 다음 쥐가 나옵니다.
+    mole(body, d, win) {
+      const grid = h('div', 'ggrid g3 mole');
+      const mine = root;
+      const holes = [...Array(9)].map(() => { const b = h('button', 'hole9', '<span></span>'); grid.appendChild(b); return b; });
+      const hits = [];
+      let k = -1, up = -1, timer = 0;
+      const next = (wait) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          if (root !== mine || done) return;
+          if (up >= 0) holes[up].classList.remove('up');
+          k++; up = d.seq[k % d.seq.length];
+          holes[up].classList.add('up'); holes[up].firstChild.textContent = '🐭';
+          if (k === 0) holes[up].classList.add('hint');
+          timer = setTimeout(() => { if (root !== mine || done) return; holes[up].classList.remove('up'); up = -1; next(250); }, d.show);
+        }, wait);
+      };
+      holes.forEach((b, i) => onTap(b, () => {
+        if (done || root !== mine) return;
+        if (i !== up) return; // 빈 구멍은 무시
+        b.classList.remove('hint');
+        b.firstChild.textContent = '💥'; b.classList.add('hit'); tick();
+        setTimeout(() => b.classList.remove('up', 'hit'), 180);
+        up = -1; hits.push(k);
+        win.step(`${hits.length}/${d.hits}`);
+        if (hits.length === d.hits) { clearTimeout(timer); return win({ hits }); }
+        next(300);
+      }));
+      win.step(`0/${d.hits}`);
+      body.appendChild(grid);
+      next(500);
+    },
+
+    // 10. 카드를 두 장씩 뒤집어 같은 그림 찾기. 다르면 잠깐 보여 주고 다시 덮습니다.
+    cards(body, d, win) {
+      const grid = h('div', 'ggrid g3 cards');
+      const pairs = []; let open = [], lock = false;
+      d.deck.forEach((ic, i) => {
+        const c = h('button', 'card9' + (i === 0 ? ' hint' : ''), `<span>${ic}</span>`);
+        onTap(c, () => {
+          if (done || lock || c.classList.contains('up')) return;
+          grid.querySelectorAll('.hint').forEach(x => x.classList.remove('hint'));
+          c.classList.add('up'); buzz(10);
+          open.push(i);
+          if (open.length < 2) return;
+          const [a, b] = open; open = [];
+          if (d.deck[a] === d.deck[b]) {
+            pairs.push([a, b]); tick();
+            [a, b].forEach(j => grid.children[j].classList.add('ok'));
+            win.step(`${pairs.length}/${d.deck.length / 2}`);
+            if (pairs.length === d.deck.length / 2) win({ pairs });
+            return;
+          }
+          lock = true;
+          setTimeout(() => { [a, b].forEach(j => grid.children[j].classList.remove('up')); lock = false; }, 700);
+        });
+        grid.appendChild(c);
+      });
+      win.step(`0/${d.deck.length / 2}`);
+      body.appendChild(grid);
     },
   };
 

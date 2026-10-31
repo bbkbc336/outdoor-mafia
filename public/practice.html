@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0d0f14">
 <title>미니게임 연습 — 야외 마피아</title>
+<script src="/kakao.js"></script>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -31,6 +32,8 @@ const MAKE = {
   lens: () => ({ wipe: 0.22, speed: 1000 }),
   sort: () => ({ boxes: Array.from({ length: 16 }, () => ['red', 'blue', 'yellow', 'green'][r(4)]) }),
   level: () => ({ hold: 4000, targets: [0, 1, 2].map(() => ({ base: 30 + r(41), amp: 10 + r(9), period: 5000 + r(3000), phase: r(628) / 100 })) }),
+  mole: () => { const seq = []; let prev = -1; while (seq.length < 60) { const n = r(9); if (n !== prev) { seq.push(n); prev = n; } } return { hits: 15, show: 1100, seq }; },
+  cards: () => { const icons = shuffle(['🍎', '🍌', '🍇', '🍉', '🍒', '🥝', '🍑', '🍋']).slice(0, 6); return { deck: shuffle(icons.concat(icons)) }; },
   shape: () => { const set = ['circle', 'triangle', 'square', 'star'].flatMap(s => ['blue', 'orange'].map(c => ({ s, c }))); return { pieces: shuffle(set), holes: shuffle(set) }; },
 };
 const best = store.get('mafia:practice') || {};

@@ -145,6 +145,23 @@ async function playGame(page) {
       }
       await send('touchEnd');
     }
+  } else if (await g.locator('.mole').count()) {
+    // 튀어나온 쥐를 보이는 대로 누르기
+    for (let i = 0; i < 400 && !(await won()); i++) {
+      const m = g.locator('.hole9.up:not(.hit)').first();
+      if (await m.count()) await m.tap({ timeout: 1000 }).catch(() => {}); else await sleep(80);
+    }
+  } else if (await g.locator('.cards').count()) {
+    // 카드 그림을 읽어 짝끼리 차례로 뒤집기
+    const icons = await g.locator('.card9 span').allTextContents();
+    const seen = new Set();
+    for (let i = 0; i < icons.length && !(await won()); i++) {
+      if (seen.has(i)) continue;
+      const j = icons.indexOf(icons[i], i + 1);
+      seen.add(i); seen.add(j);
+      await g.locator('.card9').nth(i).tap(); await g.locator('.card9').nth(j).tap();
+      await sleep(150);
+    }
   } else if (await g.locator('.piece').count()) {
     for (let i = 0; i < 12 && await g.locator('.piece').count(); i++) {
       const p = g.locator('.piece').first();
@@ -283,7 +300,7 @@ async function doTask(page, codeOf, how) {
     ok(await P[cit[0]].locator('[data-a="scanArea"].danger').count() === 1 && !(await P[cit[0]].locator('[data-a="kill"]').count()), '시민이 열면 위장 화면 (암살 버튼 없음)');
     await P[cit[0]].locator('[data-a="toggleSecret"]').tap();
 
-    step('6. 미니게임 8종 (실제 터치)');
+    step('6. 미니게임 10종 (실제 터치)');
     const played = new Set();
     let k = 0;
     for (let round = 0; round < 2 && played.size < 8; round++) { // 3바퀴면 80%를 넘어 시민이 먼저 이김

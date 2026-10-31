@@ -14,17 +14,19 @@ const right = (game, d) => ({
   fire: { out: d.spots && d.spots.length }, power: { links: (d.left || []).map((c, i) => [i, d.right.indexOf(c)]) }, lock: { seq: d.code },
   order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: 0.95 }, sort: { bins: d.boxes },
   level: { locked: 3 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c) },
+    mole: { hits: [...Array(15)].map((_, i) => i) }, cards: { pairs: (d.deck || []).map((c, i) => [i, d.deck.indexOf(c, i + 1)]).filter(x => x[1] > 0) },
 }[game]);
 const wrong = (game, d) => ({
   fire: { out: 3 }, power: { links: (d.left || []).map((c, i) => [i, i]) }, lock: { seq: (d.code || []).slice(0, 3) },
   order: { seq: [2, 1, ...[...Array(23)].map((_, i) => i + 3)] }, lens: { clean: 0.3 }, sort: { bins: (d.boxes || []).map(c => (c === 'red' ? 'blue' : 'red')) },
   level: { locked: 2 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c).slice(0, 7) },
+  mole: { hits: [...Array(14)].map((_, i) => i) }, cards: { pairs: [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11]] },
 }[game]);
 
 const room = G.createRoom(new Set());
 ['가', '나', '다', '라'].forEach(n => G.join(room, n));
 G.assignTags(room);
-G.updateSettings(room, { mafiaCount: 1, tasksPerPlayer: 8, startProtect: 0 });
+G.updateSettings(room, { mafiaCount: 1, tasksPerPlayer: 10, startProtect: 0 });
 const L = room.locations[0];
 G.saveMissions(room, G.GAME_KINDS.map(k => ({ type: 'game', game: k, loc: L.id })));
 G.assignRoles(room);
@@ -34,7 +36,7 @@ const seq = () => room.phaseSeq;
 
 console.log('\n[게임별 문제·판정]');
 const seen = new Set();
-for (let i = 0; i < 8; i++) {
+for (let i = 0; i < 10; i++) {
   const t = p.tasks[p.taskIdx];
   const r = G.scan(room, p, L.code, seq());
   seen.add(r.game);
@@ -46,7 +48,7 @@ for (let i = 0; i < 8; i++) {
   const res = G.play(room, p, t.id, right(r.game, r.data), seq());
   ok(res.kind === 'done' && t.done, `${r.name}: 맞게 끝내면 임무 완료`);
 }
-ok(seen.size === 8, '8종 모두 시험');
+ok(seen.size === 10, '10종 모두 시험');
 ok(G.GAME_KINDS.every(k => G.GAMES[k].min >= 8000), '모든 게임은 8초 안에 끝낼 수 없음 (한 판 약 20초 분량)');
 
 console.log('\n[진행 상황]');

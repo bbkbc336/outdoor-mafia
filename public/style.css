@@ -254,3 +254,68 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .alarm .go { font-size: 20px; padding: 14px 22px; border-radius: 16px; background: rgba(0,0,0,0.45); border: 2px solid var(--accent); }
 .alarm .go b { font-size: 30px; color: var(--accent); }
 @keyframes alarm { 50% { filter: brightness(1.6); } }
+/* 해충 퇴치 */
+.mole .hole9 { position: relative; min-height: 0; aspect-ratio: 1; padding: 0; border-radius: 50%; background: radial-gradient(circle at 50% 60%, #05070c 0 55%, #3a2f22 56% 100%); border: 0; overflow: hidden; }
+.mole .hole9 span { position: absolute; left: 0; right: 0; bottom: -70%; font-size: 52px; transition: bottom 0.12s ease-out; pointer-events: none; }
+.mole .hole9.up span { bottom: 14%; }
+.mole .hole9.hit span { transform: scale(1.2); }
+/* 카드 짝 맞추기 */
+.cards .card9 { min-height: 0; aspect-ratio: 3 / 4; padding: 0; font-size: 44px; background: repeating-linear-gradient(45deg, #2d6fc0 0 10px, #4da3ff 10px 20px); border-color: #2d6fc0; transition: transform 0.15s; }
+.cards .card9 span { visibility: hidden; }
+.cards .card9.up { background: var(--panel2); border-color: var(--accent); transform: scale(1.03); }
+.cards .card9.up span { visibility: visible; }
+.cards .card9.ok { border-color: var(--good); opacity: 0.55; transform: none; }
+
+/* ───── 움직임 ─────
+   움직임 줄이기를 켠 휴대폰에서는 모두 끕니다. 위치를 잡는 transform과 겹치지 않게
+   translate·scale·rotate 속성을 따로 씁니다. */
+@media (prefers-reduced-motion: no-preference) {
+  .modal .sheet { animation: m-up 0.25s ease-out; }
+  .toast { animation: m-toast 0.25s ease-out; }
+  @keyframes m-up { from { translate: 0 40px; opacity: 0; } }
+  @keyframes m-toast { from { translate: 0 -14px; opacity: 0; } }
+
+  .game { animation: m-up 0.25s ease-out; }
+  .game .gbody > * { animation: m-in 0.3s ease-out both; }
+  @keyframes m-in { from { opacity: 0; scale: 0.94; } }
+  .game button:active, .game .crate:active { scale: 0.95; }
+  .gstep.bump { animation: m-bump 0.3s ease-out; }
+  @keyframes m-bump { 40% { scale: 1.4; } }
+  @keyframes m-pop { 40% { scale: 1.25; } }
+
+  /* 완료 반짝이 */
+  .gwin .spark { position: absolute; left: 50%; top: 50%; font-size: 30px; animation: m-burst 0.7s ease-out forwards; }
+  @keyframes m-burst { from { translate: -50% -50%; opacity: 1; } to { translate: calc(-50% + var(--dx)) calc(-50% + var(--dy)); rotate: var(--r); opacity: 0; } }
+
+  /* 화재 진압: 불꽃 일렁임, 꺼질 때 연기 */
+  .flame:not(.out):not(.hint) { animation: m-flick 0.5s ease-in-out infinite alternate; }
+  .flame:nth-child(2n) { animation-duration: 0.65s !important; }
+  @keyframes m-flick { from { rotate: -7deg; scale: 0.94; } to { rotate: 7deg; scale: 1.06; } }
+  .flame.out { animation: m-puff 0.5s ease-out; }
+  @keyframes m-puff { from { scale: 1.6; opacity: 1; } }
+
+  /* 전선: 이어질 때 선이 그려짐 */
+  .wires line.fresh { stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: m-draw 0.35s ease-out forwards; }
+  @keyframes m-draw { to { stroke-dashoffset: 0; } }
+  .wdot.done, .wdot.sel { animation: m-pop 0.3s ease-out; }
+
+  /* 다이얼·순서·부품·출력: 맞히면 톡 */
+  .dialnow.ok, .dialgoal span.ok, .order button.ok, .hole.full, .track.locked, .bin.got { animation: m-pop 0.3s ease-out; }
+
+  /* 렌즈: 다 닦으면 반짝 */
+  .garea.lens.clean { animation: m-shine 0.6s ease-out; }
+  @keyframes m-shine { 30% { box-shadow: 0 0 40px 10px #9fd8ff; } }
+
+  /* 화물: 새 상자가 위에서 떨어짐 */
+  .crate { animation: m-drop 0.25s ease-out; }
+  @keyframes m-drop { from { translate: 0 -40px; opacity: 0; } }
+
+  /* 해충 퇴치: 튀어나올 때 통통 */
+  .mole .hole9 span { transition: bottom 0.18s cubic-bezier(0.3, 1.6, 0.5, 1); }
+  .mole .hole9.hit { animation: m-pop 0.2s ease-out; }
+
+  /* 카드: 뒤집기 */
+  .cards .card9.up { animation: m-flip 0.22s ease-out; }
+  .cards .card9.ok { animation: m-pop 0.3s ease-out; }
+  @keyframes m-flip { from { scale: 0 1; } }
+}

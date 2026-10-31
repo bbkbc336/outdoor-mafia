@@ -43,6 +43,7 @@ function solveGame(r) {
     fire: { out: d.spots && d.spots.length }, power: { links: (d.left || []).map((c, i) => [i, d.right.indexOf(c)]) }, lock: { seq: d.code },
     order: { seq: [...Array(25)].map((_, i) => i + 1) }, lens: { clean: 0.95 }, sort: { bins: d.boxes },
     level: { locked: 3 }, shape: { placed: (d.holes || []).map(x => x.s + '-' + x.c) },
+    mole: { hits: [...Array(15)].map((_, i) => i) }, cards: { pairs: (d.deck || []).map((c, i) => [i, d.deck.indexOf(c, i + 1)]).filter(x => x[1] > 0) },
   }[r.game];
 }
 

@@ -137,6 +137,7 @@ const ROLE_NAME = { mafia: '마피아', citizen: '시민' };
 const GAME_NAME = {
   fire: '🔥 화재 진압', power: '🔌 전원 복구', lock: '🔐 문 잠금 해제', order: '🔢 순서 점검',
   lens: '🧽 렌즈 닦기', sort: '📦 화물 분류', level: '⚡ 출력 조정', shape: '🧩 부품 끼우기',
+  mole: '🐭 해충 퇴치', cards: '🃏 카드 짝 맞추기',
 };
 
 // 탭 보정: 손가락으로 버튼을 짧게 눌렀는데 브라우저가 click을 만들지 않는 경우가 있습니다

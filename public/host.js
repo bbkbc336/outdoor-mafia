@@ -300,7 +300,7 @@ function tabMissions(v) {
         <input data-m="opts" value="${esc(((m.q && m.q.options) || []).join(', '))}" placeholder="선택지 (쉼표로 구분)" ${dis} style="margin-top:8px">
         <input data-m="ans" value="${esc((m.q && m.q.answer) || '')}" placeholder="정답 (선택지 중 하나)" ${dis} style="margin-top:8px">` : ''}
     </div>`).join('')}</div>
-    <div class="card small"><a href="/practice" target="_blank" style="color:var(--accent)">🎮 미니게임 8종 미리 해 보기 (연습 페이지)</a></div>
+    <div class="card small"><a href="/practice" target="_blank" style="color:var(--accent)">🎮 미니게임 10종 미리 해 보기 (연습 페이지)</a></div>
     ${locked ? '' : `<div class="btns"><button data-mis="add">+ 임무 추가</button>
       <button data-mis="fill">장소마다 미니게임 채우기</button>
       <button class="primary" data-mis="save">임무 저장</button>
@@ -319,7 +319,7 @@ function syncMisDraft() {
 }
 function defaultMissions(v) {
   const out = [];
-  // 장소마다 미니게임 하나씩, 8종을 돌아가며 배치
+  // 장소마다 미니게임 하나씩, 10종을 돌아가며 배치
   const kinds = Object.keys(GAME_NAME);
   v.locations.forEach((l, i) => out.push({ type: 'game', loc: l.id, game: kinds[i % kinds.length], title: '', desc: '' }));
   return out;
