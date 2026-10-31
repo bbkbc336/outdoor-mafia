@@ -261,11 +261,12 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .mole .hole9.up span { bottom: 14%; }
 .mole .hole9.hit span { transform: scale(1.2); }
 /* 카드 짝 맞추기 */
-.cards .card9 { min-height: 0; aspect-ratio: 3 / 4; padding: 0; font-size: 40px; background: repeating-linear-gradient(45deg, #2d6fc0 0 10px, #4da3ff 10px 20px); border-color: #2d6fc0; transition: transform 0.15s; }
+.cards .card9 { position: relative; min-height: 0; aspect-ratio: 3 / 4; padding: 0; font-size: 40px; background: repeating-linear-gradient(45deg, #2d6fc0 0 10px, #4da3ff 10px 20px); border-color: #2d6fc0; transition: transform 0.15s; }
 .cards .card9 span { visibility: hidden; }
 .cards .card9.up { background: var(--panel2); border-color: var(--accent); transform: scale(1.03); }
 .cards .card9.up span { visibility: visible; }
-.cards .card9.ok { border-color: var(--good); opacity: 0.55; transform: none; }
+.cards .card9.ok { background: #10301f; border-color: var(--good); transform: none; }
+.cards .card9.ok::after { content: '✓'; position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: var(--good); color: #052b16; font: 900 16px/24px system-ui, sans-serif; }
 
 /* ───── 움직임 ─────
    움직임 줄이기를 켠 휴대폰에서는 모두 끕니다. 위치를 잡는 transform과 겹치지 않게

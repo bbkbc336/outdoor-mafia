@@ -162,7 +162,7 @@ async function playGame(page) {
       const j = icons.indexOf(icons[i], i + 1);
       seen.add(i); seen.add(j);
       await g.locator('.card9').nth(i).tap({ force: true }); await g.locator('.card9').nth(j).tap({ force: true });
-      await sleep(150);
+      await sleep(450); // 짝 표시(0.3초) 동안은 다음 카드를 누를 수 없음
     }
   } else if (await g.locator('.piece').count()) {
     for (let i = 0; i < 12 && await g.locator('.piece').count(); i++) {

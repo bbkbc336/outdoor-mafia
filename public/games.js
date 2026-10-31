@@ -482,10 +482,15 @@ const Games = (() => {
           if (open.length < 2) return;
           const [a, b] = open; open = [];
           if (d.deck[a] === d.deck[b]) {
-            pairs.push([a, b]); tick();
-            [a, b].forEach(j => grid.children[j].classList.add('ok'));
-            win.step(`${pairs.length}/${d.deck.length / 2}`);
-            if (pairs.length === d.deck.length / 2) win({ pairs });
+            // 짝이면 뒤집히는 모습을 다 보여 준 뒤 초록 테두리와 ✓로 표시
+            pairs.push([a, b]); lock = true;
+            setTimeout(() => {
+              if (done || !root) return;
+              [a, b].forEach(j => grid.children[j].classList.add('ok'));
+              tick(); lock = false;
+              win.step(`${pairs.length}/${d.deck.length / 2}`);
+              if (pairs.length === d.deck.length / 2) win({ pairs });
+            }, 300);
             return;
           }
           lock = true;
