@@ -43,6 +43,15 @@ function announce(prev, v) {
   else if (v.phase === 'ended' && v.end) say(v.end.winner === 'citizen' ? '시민 승리입니다!' : v.end.winner === 'mafia' ? '마피아 승리입니다!' : '게임이 종료되었습니다.');
 }
 
+// 기다리는 사람(먼저, 크게)과 끝낸 사람 두 묶음. note(p)가 있으면 이름 옆에 작게 붙입니다.
+function waitLists(waiting, done, waitLabel, doneLabel, note = () => '') {
+  return `<div class="scr-wait-lists">
+    <div class="wl wait"><div class="wl-head">${waitLabel} <b>${waiting.length}</b>명</div>
+      <ul>${waiting.map(p => `<li>${esc(p.name)}${note(p) ? `<small>${note(p)}</small>` : ''}</li>`).join('') || '<li class="none">없음 🎉</li>'}</ul></div>
+    <div class="wl done"><div class="wl-head">${doneLabel} <b>${done.length}</b>명</div>
+      <ul>${done.map(p => `<li>${esc(p.name)} ✔</li>`).join('')}</ul></div></div>`;
+}
+
 const timer = (v) => v.phaseEndsAt ? `<div class="scr-timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : '';
 // 공개 상태: 신고·회의로 확인된 탈락자만 '탈락', 아직 발견되지 않은 사망자는 참가 중으로 보입니다.
 const pubOut = (p) => p.status === 'deadRevealed' || p.status === 'ejected';
@@ -56,10 +65,11 @@ function viewOf(v) {
       return `<div class="scr-grid"><div class="scr-join"><img src="/qr.svg?text=${encodeURIComponent(joinUrl)}" alt="입장 QR"><p class="scr-url">${esc(joinUrl.replace(/^https?:\/\//, ''))}</p></div>
         <div><div class="scr-kicker">방 코드</div><div class="scr-code">${esc(v.code)}</div>
         <div class="scr-stats"><div><b>${ps.length}</b>입장</div><div><b class="ok">${ps.filter(p => p.ready).length}</b>준비 완료</div></div>
-        <ul class="scr-names">${ps.map(p => `<li class="${p.ready ? 'ready' : ''}">${esc(p.name)}${p.ready ? ' ✔' : ''}</li>`).join('')}</ul></div></div>`;
+        ${waitLists(ps.filter(p => !p.ready), ps.filter(p => p.ready), '아직 준비 안 함', '준비 완료', p => (p.tag ? '' : '이름표 미연결'))}</div></div>`;
     }
     case 'briefing':
-      return `<div class="scr-center"><div class="scr-title">역할 확인 중</div><div class="scr-big">${ps.filter(p => p.ack).length} / ${ps.length}</div><p class="scr-sub">각자 휴대폰에서 몰래 역할을 확인하세요</p></div>`;
+      return `<div class="scr-center"><div class="scr-title">역할 확인 중</div><div class="scr-big">${ps.filter(p => p.ack).length} / ${ps.length}</div><p class="scr-sub">각자 휴대폰에서 몰래 역할을 확인하세요</p>
+        ${waitLists(ps.filter(p => !p.ack), ps.filter(p => p.ack), '아직 확인 안 함', '확인 완료')}</div>`;
     case 'active': {
       const pr = v.progress || { pct: 0, goal: 80 };
       return `<div class="scr-center"><div class="scr-kicker">공동 임무 진행률</div><div class="scr-big">${pr.pct}%</div>
