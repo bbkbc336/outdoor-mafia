@@ -1,9 +1,11 @@
-node_modules/
-data/
-shots/
 *.log
+.DS_Store
+.dev.vars
 .env*
 .vercel/
-.DS_Store
+.wrangler/
 Thumbs.db
 __pycache__/
+data/
+node_modules/
+shots/

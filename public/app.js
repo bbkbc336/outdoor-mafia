@@ -86,6 +86,23 @@ function enter(code, token) {
   connect();
 }
 
+// 화면에 보이는 내용 비교용: 방 전체 버전·서버 시각은 빼고, noProgress면 공동 진행률도 뺍니다.
+function screenKey(v, noProgress) {
+  const { version, serverNow, remainMs, ...rest } = v;
+  if (noProgress) delete rest.progress;
+  return JSON.stringify(rest);
+}
+function patchProgress(v) {
+  const box = document.getElementById('prog');
+  if (!box || !v.progress) return false;
+  const pct = v.progress.pct;
+  const b = box.querySelector('.row b'), bar = box.querySelector('.progress > div');
+  if (!b || !bar) return false;
+  b.textContent = pct + '%';
+  bar.style.width = Math.min(100, pct) + '%';
+  return true;
+}
+
 function leave(msg) {
   if (S.stream) S.stream.close();
   S.stream = null; S.view = null; S.token = null;
@@ -100,9 +117,14 @@ function connect() {
   app.innerHTML = '<main><p class="muted center" style="margin-top:40vh">연결 중…</p></main>';
   S.stream = connectStream(S.code, S.token, {
     onState: (v) => {
-      const prev = S.view; S.view = v;
-      // 주기적 동기화로 같은 상태가 다시 오면 화면을 다시 그리지 않습니다(펼친 메뉴 유지).
-      if (prev && prev.version === v.version) return;
+      const prev = S.view;
+      // 늦게 도착한 옛 상태가 더 새로운 상태(내 행동의 응답 등)를 덮지 않게 합니다.
+      if (prev && v.version < prev.version) return;
+      S.view = v;
+      // 나에게 보이는 내용이 그대로면 다시 그리지 않습니다(다른 사람의 행동, 펼친 메뉴 유지).
+      if (prev && screenKey(prev) === screenKey(v)) return;
+      // 공동 진행률만 바뀌었으면 그 숫자와 막대만 바꿉니다.
+      if (prev && prev.phase === 'active' && screenKey(prev, true) === screenKey(v, true) && patchProgress(v)) return;
       onChange(prev, v); render();
     },
     onDenied: (msg) => leave(msg),
@@ -141,6 +163,8 @@ function onChange(prev, v) {
 // ───────────── 행동 ─────────────
 async function act(action, extra = {}) {
   if (!S.online) { toast('연결이 끊겨 있습니다. 연결되면 다시 눌러 주세요.', 'bad'); return null; }
+  // QR 스캔은 바로 앞 요청(예: 미니게임 완료)이 끝날 때까지 잠깐 기다렸다가 처리합니다. 다른 버튼은 두 번 눌림을 막습니다.
+  if (S.busy && action === 'scan') { for (let i = 0; i < 40 && S.busy; i++) await new Promise(r => setTimeout(r, 100)); }
   if (S.busy) return null;
   S.busy = true;
   try {

@@ -192,7 +192,9 @@ async function doTask(page, codeOf, how) {
   const code = codeOf[t.loc];
   if (how === 'camera') await page.goto(`${B}/?s=${code}`);
   else {
-    await page.locator('[data-a="scan"]').tap();
+    // 다른 사람이 마지막 임무를 끝내 게임이 끝나면 스캔 버튼이 사라지므로, 그때는 멈춥니다(실시간 연결은 바로 반영됨).
+    const tapped = await page.locator('[data-a="scan"]').tap({ timeout: 8000 }).then(() => true, () => false);
+    if (!tapped) { if ((await view(page)).phase !== 'active') return null; await page.locator('[data-a="scan"]').tap(); }
     // 스크롤이 멈추는 순간 누르면 탭이 무시될 수 있어, 사람처럼 한 번 더 누릅니다(횟수 기록).
     if (!(await page.locator('#codeInput').waitFor({ timeout: 2000 }).then(() => true, () => false))) { retries.push(page.label); await page.locator('[data-a="scan"]').tap(); }
     try { await page.locator('#codeInput').waitFor({ timeout: 6000 }); } catch (e) {

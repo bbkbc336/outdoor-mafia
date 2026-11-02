@@ -1,0 +1,24 @@
+// Cloudflare Workers 배포 설정. 배포: npx wrangler deploy (Cloudflare 계정 로그인 필요)
+{
+  "$schema": "https://unpkg.com/wrangler@4.151.0/config-schema.json",
+  "name": "outdoor-mafia",
+  "main": "cf/worker.js",
+  "compatibility_date": "2025-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // public/ 은 정적 파일로 바로 내보냅니다(요청 수에 안 셈). /host → host.html, /practice → practice.html
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "run_worker_first": ["/api/*", "/print", "/qr.svg"]
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOMS", "class_name": "Room" },
+      { "name": "LIMITS", "class_name": "Limiter" }
+    ]
+  },
+  // 무료 요금제에서도 쓸 수 있는 SQLite 기반 Durable Object
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room", "Limiter"] }],
+  "observability": { "enabled": true }
+}

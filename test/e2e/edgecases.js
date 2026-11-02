@@ -177,7 +177,7 @@ const solve = (game, d) => ({
     await until(async () => (await hv()).phase === 'result', 5000, '결과');
     ok((await hv()).lastResult.ejected === mafia[0], `${mafia[0]}(마피아) 추방`);
     await host('resume');
-    await until(async () => (await view(mafia[0])).phase === 'active', 5000, '재개');
+    await until(async () => (await view(mafia[0])).me.status === 'ghost', 8000, '추방된 마피아 유령으로 재개');
     const vm = await view(mafia[0]);
     ok(vm.me.status === 'ghost' && (!vm.mafia || !vm.mafia.targets || vm.mafia.targets.length === 0), '추방된 마피아는 유령, 암살 대상 없음');
     const km = await act(mafia[0], 'kill', { target: id(D), seq: await seq() });

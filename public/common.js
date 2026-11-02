@@ -94,11 +94,74 @@ function confirmBox(title, body, okLabel = '확인', danger = false) {
   });
 }
 
-// 상태 받기 (폴링). 화면이 켜져 있으면 2.5초마다 묻고, 바뀐 게 없으면 서버가 짧게 답합니다.
-// 화면 잠금·앱 전환 후 돌아오면 즉시 다시 묻습니다.
+// 상태 받기.
+//  1) WebSocket(Cloudflare 서버): 연결해 두면 방이 바뀔 때만 서버가 보내 줍니다. 끊기면 다시 붙습니다.
+//  2) 묻기(폴링, Vercel·로컬 서버): WebSocket을 지원하지 않는 서버면 자동으로 이 방식으로 바꿉니다.
+//     화면이 켜져 있으면 2.5초마다 묻고, 바뀐 게 없으면 서버가 짧게 답합니다.
+// 화면 잠금·앱 전환 후 돌아오면 즉시 다시 묻거나 다시 연결합니다.
 function connectStream(code, token, { onState, onDenied, onKicked, onStatus, host = false }) {
   const EVERY = 2500, HIDDEN = 20000;
   let closed = false, timer = null, inflight = false, rev = null, got = false, n = 0, last = null;
+  let mode = typeof WebSocket === 'function' ? 'ws' : 'poll', ws = null, wsOpened = false, wsFails = 0, pinger = null;
+  // 화면 다시 그리기 모으기: 새 상태가 잇달아 오면 최대 0.3초에 한 번만 넘기고
+  // 손가락이 화면에 닿아 있는 동안은 미뤘다가(최대 3초) 뗀 뒤에 그립니다. 누르던 버튼이 바뀌어 눌림이 사라지지 않게 합니다.
+  let pending = null, pendingAt = 0, flushTimer = null, lastFlush = 0, touching = false;
+  const flush = () => {
+    flushTimer = null;
+    if (!pending || closed) return;
+    if (touching && Date.now() - pendingAt < 3000) { flushTimer = setTimeout(flush, 150); return; }
+    const v = pending; pending = null; lastFlush = Date.now();
+    onState(v);
+  };
+  const down = () => { touching = true; }, up = () => { touching = false; };
+  document.addEventListener('pointerdown', down, true);
+  document.addEventListener('pointerup', up, true);
+  document.addEventListener('pointercancel', up, true);
+  const deliver = (r) => {
+    onStatus(true); got = true; syncClock(r); rev = r.rev;
+    if (r.view) {
+      // 같은 내용이 다시 오면 넘기지 않습니다(방 전체 버전·서버 시각만 바뀐 경우 포함).
+      const s = JSON.stringify({ ...r.view, serverNow: 0, version: 0, remainMs: 0 });
+      if (s === last) return;
+      last = s;
+      if (!pending) pendingAt = Date.now();
+      pending = r.view;
+      if (!flushTimer) flushTimer = setTimeout(flush, Math.max(0, 300 - (Date.now() - lastFlush)));
+    }
+  };
+  const stop = (fn, msg) => { closed = true; clearTimeout(timer); clearTimeout(flushTimer); clearInterval(pinger); try { ws && ws.close(); } catch (_) { /* 무시 */ } fn(msg); };
+
+  // ── WebSocket
+  function openWs() {
+    if (closed) return;
+    clearTimeout(timer);
+    const url = location.origin.replace(/^http/, 'ws') + `/api/ws?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`;
+    let opened = false;
+    try { ws = new WebSocket(url); } catch (_) { return toPoll(); }
+    ws.onopen = () => { opened = true; wsOpened = true; wsFails = 0; clearInterval(pinger); pinger = setInterval(() => { try { ws.send('ping'); } catch (_) { /* 무시 */ } }, 25000); };
+    ws.onmessage = (e) => {
+      if (e.data === 'pong') return;
+      let m; try { m = JSON.parse(e.data); } catch (_) { return; }
+      if (m.type === 'state') deliver(m);
+      else if (m.type === 'denied') stop(got ? onKicked : onDenied, m.error);
+      else if (m.type === 'kicked') stop(onKicked, m.error);
+    };
+    ws.onclose = () => {
+      clearInterval(pinger);
+      if (closed) return;
+      // 한 번도 열린 적 없는 서버 = WebSocket 미지원 → 묻기로 전환
+      if (!wsOpened) return toPoll();
+      onStatus(false);
+      wsFails++;
+      // 연달아 여러 번 끊기면(네트워크가 WebSocket을 막는 경우) 묻기로 전환
+      if (wsFails >= 5) return toPoll();
+      timer = setTimeout(openWs, Math.min(8000, 500 * 2 ** wsFails));
+    };
+    ws.onerror = () => { /* onclose에서 처리 */ };
+  }
+  function toPoll() { mode = 'poll'; ws = null; poll(); }
+
+  // ── 묻기(폴링)
   const schedule = () => { clearTimeout(timer); if (!closed) timer = setTimeout(poll, document.visibilityState === 'visible' ? EVERY : HIDDEN); };
   async function poll() {
     if (closed || inflight) return;
@@ -106,27 +169,32 @@ function connectStream(code, token, { onState, onDenied, onKicked, onStatus, hos
     const r = await postJSON('/api/state', { code, token, rev, host, beat: n++ % 4 === 0 });
     inflight = false;
     if (closed) return;
-    if (r.ok) {
-      onStatus(true); got = true; syncClock(r); rev = r.rev;
-      if (r.view) {
-        // 같은 내용이 다시 오면 화면을 다시 그리지 않습니다(펼친 메뉴·입력 유지).
-        const s = JSON.stringify({ ...r.view, serverNow: 0 });
-        if (s !== last) { last = s; onState(r.view); }
-      }
-    } else if (r.network || r.status >= 500) {
-      onStatus(false);
-    } else {
-      closed = true;
-      return got ? onKicked(r.error) : onDenied(r.error);
-    }
+    if (r.ok) deliver(r);
+    else if (r.network || r.status >= 500) onStatus(false);
+    else return stop(got ? onKicked : onDenied, r.error);
     schedule();
   }
-  poll();
-  const vis = () => { if (document.visibilityState === 'visible' && !closed) poll(); };
+
+  // WebSocket을 지원하는 서버(Cloudflare)인지 한 번 물어보고 시작합니다. 아니면 처음부터 묻기 방식.
+  if (mode === 'ws') {
+    fetch('/api/ping', { cache: 'no-store' }).then(r => r.json()).then(j => { if (!closed) { if (j && j.ws) openWs(); else toPoll(); } })
+      .catch(() => { if (!closed) toPoll(); });
+  } else poll();
+  const vis = () => {
+    if (document.visibilityState !== 'visible' || closed) return;
+    if (mode === 'poll') return poll();
+    // 화면을 다시 켰을 때 연결이 끊겨 있으면 바로 다시 붙습니다.
+    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) { wsFails = 0; openWs(); }
+  };
   document.addEventListener('visibilitychange', vis);
   window.addEventListener('online', vis);
   window.addEventListener('pageshow', (e) => { if (e.persisted) vis(); });
-  return { close() { closed = true; clearTimeout(timer); document.removeEventListener('visibilitychange', vis); } };
+  return { close() {
+    closed = true; clearTimeout(timer); clearTimeout(flushTimer); clearInterval(pinger);
+    try { ws && ws.close(); } catch (_) { /* 무시 */ }
+    document.removeEventListener('visibilitychange', vis);
+    document.removeEventListener('pointerdown', down, true); document.removeEventListener('pointerup', up, true); document.removeEventListener('pointercancel', up, true);
+  } };
 }
 
 const PHASE_NAME = {
