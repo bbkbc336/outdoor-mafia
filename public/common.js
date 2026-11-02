@@ -138,8 +138,17 @@ function connectStream(code, token, { onState, onDenied, onKicked, onStatus, hos
     const url = location.origin.replace(/^http/, 'ws') + `/api/ws?code=${encodeURIComponent(code)}&token=${encodeURIComponent(token)}`;
     let opened = false;
     try { ws = new WebSocket(url); } catch (_) { return toPoll(); }
-    ws.onopen = () => { opened = true; wsOpened = true; wsFails = 0; clearInterval(pinger); pinger = setInterval(() => { try { ws.send('ping'); } catch (_) { /* 무시 */ } }, 25000); };
+    let lastMsg = Date.now();
+    ws.onopen = () => {
+      opened = true; wsOpened = true; wsFails = 0; lastMsg = Date.now(); clearInterval(pinger);
+      // 25초마다 확인 신호. 60초 넘게 서버 답이 없으면(전파가 끊겼는데 연결이 살아 보이는 경우) 끊고 다시 붙습니다.
+      pinger = setInterval(() => {
+        if (Date.now() - lastMsg > 60000) { try { ws.close(); } catch (_) { /* 무시 */ } return; }
+        try { ws.send('ping'); } catch (_) { /* 무시 */ }
+      }, 25000);
+    };
     ws.onmessage = (e) => {
+      lastMsg = Date.now();
       if (e.data === 'pong') return;
       let m; try { m = JSON.parse(e.data); } catch (_) { return; }
       if (m.type === 'state') deliver(m);
@@ -238,4 +247,108 @@ const GAME_NAME = {
     if (hit) { e.preventDefault(); e.stopImmediatePropagation(); }
     synth = null;
   }, true);
+})();
+
+// ───── 소리: 회의 사이렌 ─────
+// 브라우저는 사용자가 한 번 터치한 뒤에만 소리를 허용하므로, 첫 터치 때 소리 장치를 켜 둡니다.
+const Sound = (() => {
+  let ctx = null;
+  const unlock = () => {
+    try {
+      if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) ctx = new AC(); }
+      if (ctx && ctx.state === 'suspended') ctx.resume();
+    } catch (_) { /* 소리 미지원 */ }
+  };
+  document.addEventListener('pointerdown', unlock, true);
+  document.addEventListener('keydown', unlock, true);
+  // 높낮이가 오르내리는 사이렌 3번 (약 2.4초)
+  function siren() {
+    if (!ctx || ctx.state !== 'running') return false;
+    const t0 = ctx.currentTime, osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    for (let i = 0; i < 3; i++) {
+      osc.frequency.setValueAtTime(620, t0 + i * 0.8);
+      osc.frequency.linearRampToValueAtTime(1250, t0 + i * 0.8 + 0.4);
+      osc.frequency.linearRampToValueAtTime(620, t0 + i * 0.8 + 0.8);
+    }
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.05);
+    gain.gain.setValueAtTime(0.22, t0 + 2.3);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.45);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + 2.5);
+    return true;
+  }
+  // 짧은 알림음 (단계가 바뀔 때)
+  function chime() {
+    if (!ctx || ctx.state !== 'running') return;
+    const t0 = ctx.currentTime;
+    [880, 1320].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; g.gain.setValueAtTime(0.0001, t0 + i * 0.18);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + i * 0.18 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.18 + 0.3);
+      o.connect(g).connect(ctx.destination); o.start(t0 + i * 0.18); o.stop(t0 + i * 0.18 + 0.32);
+    });
+  }
+  return { unlock, siren, chime, ready: () => !!ctx && ctx.state === 'running' };
+})();
+
+// ───── 화면 켜 두기 (Wake Lock) ─────
+// 화면이 꺼지면 실시간 연결이 끊겨 회의 알림을 놓치므로, 게임 중에는 화면을 켜 둡니다. 지원하지 않는 휴대폰은 그냥 넘어갑니다.
+const Awake = (() => {
+  let want = false, lock = null;
+  async function sync() {
+    try {
+      if (want && document.visibilityState === 'visible' && !lock && navigator.wakeLock) {
+        lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { lock = null; });
+      } else if (!want && lock) { await lock.release(); lock = null; }
+    } catch (_) { lock = null; }
+  }
+  document.addEventListener('visibilitychange', sync);
+  return { set(v) { if (want !== !!v) { want = !!v; sync(); } } };
+})();
+
+// ───── 화면 저장(서비스 워커) ─────
+// 앱 화면과 파일을 휴대폰에 저장해 두어 전파가 약해도 화면이 열리고, 회의 알림(푸시)을 받습니다.
+const SW = (() => {
+  const ok = 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  const reg = ok ? navigator.serviceWorker.register('/sw.js').catch(() => null) : Promise.resolve(null);
+  return { reg };
+})();
+
+// ───── 회의 알림(웹 푸시) 구독 ─────
+const Push = (() => {
+  const supported = () => 'PushManager' in window && 'Notification' in window && 'serviceWorker' in navigator;
+  // 아이폰·아이패드는 홈 화면에 추가한 앱으로 열었을 때만 알림을 받을 수 있습니다.
+  const iosNeedsInstall = () => /iP(hone|ad|od)/.test(navigator.userAgent) && !(window.navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  let serverOk = null;
+  async function serverSupports() {
+    if (serverOk !== null) return serverOk;
+    try { const j = await (await fetch('/api/ping', { cache: 'no-store' })).json(); serverOk = !!(j && j.push); } catch (_) { serverOk = false; }
+    return serverOk;
+  }
+  const b64ToBytes = (s) => { const p = '='.repeat((4 - s.length % 4) % 4); const raw = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, c => c.charCodeAt(0)); };
+  // 구독하고 서버에 등록. 권한을 묻는 창은 버튼을 누를 때만 띄울 수 있습니다.
+  async function subscribe(code, token, ask) {
+    if (!supported() || !(await serverSupports())) return 'unsupported';
+    if (Notification.permission === 'denied') return 'denied';
+    if (Notification.permission !== 'granted') {
+      if (!ask) return 'default';
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') return p;
+    }
+    const reg = await SW.reg;
+    if (!reg) return 'unsupported';
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const { key } = await (await fetch('/api/push-key', { cache: 'no-store' })).json();
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+    }
+    const r = await postJSON('/api/push', { code, token, sub: sub.toJSON() });
+    return r.ok ? 'granted' : 'error';
+  }
+  return { supported, iosNeedsInstall, serverSupports, subscribe, permission: () => ('Notification' in window ? Notification.permission : 'unsupported') };
 })();

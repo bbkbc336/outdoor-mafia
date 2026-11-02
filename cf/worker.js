@@ -30,7 +30,9 @@ export default {
         const text = (url.searchParams.get('text') || '').slice(0, 200);
         return new Response(QR.svg(text), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
       }
-      if (route === '/api/ping') return jsonRes(200, { ok: true, t: Date.now(), ws: true });
+      if (route === '/api/ping') return jsonRes(200, { ok: true, t: Date.now(), ws: true, push: true });
+      // 회의 알림(웹 푸시)용 공개 열쇠. 열쇠는 처음 쓸 때 Keys가 만들어 보관합니다.
+      if (route === '/api/push-key') { const k = await vapidKeys(env); return jsonRes(200, { key: k.pub }); }
       if (route === '/api/ws' || route === '/print') {
         const code = upper(url.searchParams.get('code'));
         if (!/^[A-Z0-9]{4}$/.test(code)) return new Response('방을 찾을 수 없습니다. 방 코드를 확인하세요.', { status: 404 });
@@ -67,6 +69,34 @@ async function createRoom(request, env) {
     if (r.ok) return jsonRes(200, { code: room.code, hostToken: room.hostToken });
   }
   return jsonRes(500, { error: '방 코드를 만들지 못했습니다.' });
+}
+
+// ───── 회의 알림(웹 푸시) ─────
+// 화면이 꺼진 휴대폰에도 '회의 소집' 알림을 보냅니다. 내용 없는 푸시만 보내므로 암호화가 필요 없고,
+// 서비스 워커(public/sw.js)가 알림 문구를 직접 띄웁니다. 서명 열쇠(VAPID)는 Keys가 한 번 만들어 둡니다.
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64uText = (obj) => b64u(new TextEncoder().encode(JSON.stringify(obj)));
+async function vapidKeys(env) {
+  const r = await env.KEYS.get(env.KEYS.idFromName('vapid')).fetch('https://keys/vapid');
+  return r.json();
+}
+async function sendPush(keys, sub, origin) {
+  const aud = new URL(sub.endpoint).origin;
+  const unsigned = b64uText({ typ: 'JWT', alg: 'ES256' }) + '.' + b64uText({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: origin });
+  const key = await crypto.subtle.importKey('jwk', keys.priv, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(unsigned));
+  return fetch(sub.endpoint, { method: 'POST', headers: { TTL: '300', Urgency: 'high', Authorization: `vapid t=${unsigned}.${b64u(sig)}, k=${keys.pub}`, 'Content-Length': '0' } });
+}
+export class Keys extends DurableObject {
+  async fetch() {
+    let k = await this.ctx.storage.get('vapid');
+    if (!k) {
+      const pair = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+      k = { priv: await crypto.subtle.exportKey('jwk', pair.privateKey), pub: b64u(await crypto.subtle.exportKey('raw', pair.publicKey)) };
+      await this.ctx.storage.put('vapid', k);
+    }
+    return Response.json(k);
+  }
 }
 
 // 방 만들기 횟수 제한: IP마다 한 시간에 30개
@@ -121,6 +151,7 @@ export class Room extends DurableObject {
     if (!this.room) throw new G.GameError('방을 찾을 수 없습니다. 방 코드를 확인하세요.');
     const room = this.room;
     const before = JSON.stringify(room);
+    const phaseBefore = room.phase;
     while (G.tick(room)) { /* 토론→투표→결과가 한꺼번에 밀렸을 때 */ }
     let result, err = null;
     try { result = fn ? fn(room) : undefined; } catch (e) { if (!(e instanceof G.GameError)) throw e; err = e; }
@@ -130,10 +161,43 @@ export class Room extends DurableObject {
       await this.ctx.storage.put({ room, rev: this.rev });
       await this.schedule();
       this.broadcast();
+      if (phaseBefore !== 'gathering' && room.phase === 'gathering') { const job = this.notifyMeeting(); if (this.ctx.waitUntil) this.ctx.waitUntil(job); }
     }
     const meta = metaOf(room, this.rev);
     if (err) { err.room = room; err.meta = meta; throw err; }
     return { room, meta, result };
+  }
+
+  // 회의 소집 알림: 알림을 켜 둔 모든 참가자에게. 만료된 구독(404·410)은 지웁니다.
+  async notifyMeeting() {
+    try {
+      const subs = (await this.ctx.storage.get('subs')) || {};
+      const pids = Object.keys(subs).filter(pid => this.room && this.room.players[pid]);
+      if (!pids.length) return;
+      const keys = await vapidKeys(this.env);
+      let changed = false;
+      await Promise.all(pids.map(async (pid) => {
+        try {
+          const r = await sendPush(keys, subs[pid].sub, subs[pid].origin);
+          if (r.status === 404 || r.status === 410) { delete subs[pid]; changed = true; }
+        } catch (e) { console.error('push', e); }
+      }));
+      if (changed) await this.ctx.storage.put('subs', subs);
+    } catch (e) { console.error('notifyMeeting', e); }
+  }
+
+  // 휴대폰이 보낸 알림 구독 정보 저장 (참가자 토큰 확인)
+  async savePush(request, url) {
+    let b;
+    try { b = await request.json(); } catch (_) { return jsonRes(400, { error: '잘못된 요청입니다.' }); }
+    const a = this.room && authIn(this.room, b.token);
+    if (!a || a.who !== 'player') return jsonRes(403, { error: '접속 정보가 없습니다.' });
+    const sub = b.sub;
+    if (!sub || typeof sub.endpoint !== 'string' || !/^https:\/\//.test(sub.endpoint)) return jsonRes(400, { error: '알림 정보가 올바르지 않습니다.' });
+    const subs = (await this.ctx.storage.get('subs')) || {};
+    subs[a.pid] = { sub: { endpoint: sub.endpoint }, origin: url.origin };
+    await this.ctx.storage.put('subs', subs);
+    return jsonRes(200, { ok: true });
   }
 
   // 다음 알람: 단계 종료 시각(정지 중이 아니면), 없으면 방 정리 시각
@@ -201,6 +265,7 @@ export class Room extends DurableObject {
       return new Response('ok');
     }
     if (url.pathname === '/api/ws') return this.connect(request, url);
+    if (url.pathname === '/api/push') return this.savePush(request, url);
     return this.runHandler(request, url);
   }
 

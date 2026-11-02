@@ -190,7 +190,11 @@ function tabRun(v) {
       ${v.phase !== 'ended' && v.phase !== 'briefing' ? '<button class="danger" data-run="end">게임 종료 (진행자 종료로 기록)</button>' : ''}
       ${v.phase !== 'ended' ? '<button class="ghostbtn" data-run="newGame">게임 초기화 → 대기 화면</button>' : ''}
     </div><p class="small muted">사망 오처리 복구·임무 수동 완료는 일시 정지 후 참가자 탭에서 합니다.</p></div>` : '';
-  return main + dangerZone + `<details class="card"><summary style="font-weight:800;cursor:pointer">다른 기기에서 진행하기</summary>
+  // 큰 화면(TV·노트북·빔프로젝터): 공개 정보만 크게 보여 주고 소리·음성으로 안내
+  const bigScreen = `<div class="card"><h3>📺 큰 화면</h3>
+    <p class="small muted">TV나 노트북에 띄워 두면 입장 QR, 진행률, 회의·투표 시간을 크게 보여 주고 소리·음성으로 안내합니다. 역할 같은 비밀은 나오지 않습니다.</p>
+    <div class="row"><a class="btn" href="/screen?room=${v.code}" target="_blank">이 기기에서 열기</a><button class="sm" data-run="copyScreen">다른 기기용 링크 복사</button></div></div>`;
+  return main + bigScreen + dangerZone + `<details class="card"><summary style="font-weight:800;cursor:pointer">다른 기기에서 진행하기</summary>
     <p class="small muted">이 링크를 연 기기도 진행자가 됩니다. 참가자에게 보여 주지 마세요.</p>
     <button class="sm" data-run="copyHost">진행자 링크 복사</button>
     <p class="small muted" style="margin-top:14px">완전히 새 방이 필요하면:</p>
@@ -207,7 +211,7 @@ function tabPlayers(v) {
       <div class="row" style="gap:6px"><span class="dot ${p.online ? '' : 'off'}" style="flex:0 0 12px"></span>
       <b style="flex:1">${esc(p.name)}</b>
       ${p.role ? `<span class="chip ${p.role}" style="flex:0">${ROLE_NAME[p.role]}</span>` : ''}
-      ${v.phase !== 'lobby' ? `<span class="chip ${p.status === 'alive' ? 'alive' : 'dead'}" style="flex:0">${STATUS_NAME[p.status]}</span>` : p.ready ? '<span class="chip alive" style="flex:0">준비</span>' : ''}</div>
+      ${v.phase !== 'lobby' ? `<span class="chip ${p.status === 'alive' ? 'alive' : 'dead'}" style="flex:0">${STATUS_NAME[p.status]}</span>` : p.ready ? '<span class="pill ready" style="flex:0">✔ 준비 완료</span>' : '<span class="pill wait" style="flex:0">준비 중</span>'}</div>
       <div class="small muted">복구 코드 <span class="kbd">${esc(p.recovery)}</span> · 이름표 ${p.tag ? `<span class="kbd">${String(p.tag).padStart(2, '0')}</span>` : '<b style="color:var(--warn)">미연결</b>'} ${task ? '· 임무 ' + task : ''}</div>
       <div class="acts">
         ${v.phase === 'lobby' ? `<button class="sm" data-pact="setTag" data-id="${p.id}" data-name="${esc(p.name)}" data-tag="${p.tag || ''}">이름표 번호</button><button class="sm" data-pact="kick" data-id="${p.id}" data-name="${esc(p.name)}">내보내기</button>` : ''}
@@ -231,6 +235,7 @@ function tabSettings(v) {
     <div class="grid2">${SETTING_FIELDS.map(([key, label, unit]) => `<div><label>${label} (${unit})</label><input type="number" inputmode="numeric" name="${key}" value="${s[key]}" ${locked ? 'disabled' : ''}></div>`).join('')}</div>
     <label>회의 집결 장소</label><input name="gatherPlace" value="${esc(s.gatherPlace)}" ${locked ? 'disabled' : ''}>
     <label class="check"><input type="checkbox" name="revealEjectedRole" ${s.revealEjectedRole ? 'checked' : ''} ${locked ? 'disabled' : ''}> 추방된 사람의 역할 공개</label>
+    <label class="check"><input type="checkbox" name="keepAwake" ${s.keepAwake !== false ? 'checked' : ''} ${locked ? 'disabled' : ''}> 게임 중 참가자 화면 켜 두기 (회의 알림을 놓치지 않게, 배터리 조금 더 씀)</label>
     ${locked ? '' : '<button class="primary" style="margin-top:12px">설정 저장</button>'}
   </form>
   <div class="card"><h3>설정 파일</h3>
@@ -364,8 +369,10 @@ app.addEventListener('click', async (e) => {
   const run = e.target.closest('[data-run]');
   if (run && !run.disabled) {
     const a = run.dataset.run, v = H.view;
-    if (a === 'copyJoin' || a === 'copyHost') {
-      const text = a === 'copyJoin' ? `${location.origin}/?room=${v.code}` : `${location.origin}/host?code=${v.code}&key=${encodeURIComponent(H.token)}`;
+    if (a === 'copyJoin' || a === 'copyHost' || a === 'copyScreen') {
+      const text = a === 'copyJoin' ? `${location.origin}/?room=${v.code}`
+        : a === 'copyScreen' ? `${location.origin}/screen?code=${v.code}&key=${encodeURIComponent(H.token)}`
+        : `${location.origin}/host?code=${v.code}&key=${encodeURIComponent(H.token)}`;
       try { await navigator.clipboard.writeText(text); toast('복사했습니다.', 'good'); } catch (_) { prompt('복사하세요', text); }
       return;
     }
@@ -475,6 +482,7 @@ app.addEventListener('submit', async (e) => {
   SETTING_FIELDS.forEach(([k]) => { settings[k] = Number(f.get(k)); });
   settings.gatherPlace = f.get('gatherPlace');
   settings.revealEjectedRole = f.get('revealEjectedRole') === 'on';
+  settings.keepAwake = f.get('keepAwake') === 'on';
   act('settings', { settings }, '설정을 저장했습니다.');
 });
 

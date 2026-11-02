@@ -107,7 +107,7 @@ function leave(msg) {
   if (S.stream) S.stream.close();
   S.stream = null; S.view = null; S.token = null;
   store.del('mafia:p:' + S.code);
-  Scanner.close(); closeModal();
+  Scanner.close(); closeModal(); Awake.set(false);
   S.notice = msg || null;
   renderHome();
 }
@@ -126,15 +126,62 @@ function connect() {
       // 공동 진행률만 바뀌었으면 그 숫자와 막대만 바꿉니다.
       if (prev && prev.phase === 'active' && screenKey(prev, true) === screenKey(v, true) && patchProgress(v)) return;
       onChange(prev, v); render();
+      if (!prev) initPush();
     },
     onDenied: (msg) => leave(msg),
     onKicked: (msg) => leave(msg),
-    onStatus: (on) => { if (S.online !== on) { S.online = on; renderBars(); } },
+    onStatus: (on) => {
+      if (S.online !== on) { S.online = on; renderBars(); }
+      if (on) flushQueue(); // 연결이 돌아오면 저장해 둔 미니게임 완료를 보냅니다
+    },
   });
+}
+
+// ───── 끊겨도 미니게임 완료 저장 ─────
+// 전파가 끊긴 순간 미니게임을 끝내면 휴대폰에 저장해 두었다가 연결되면 보냅니다. 서버가 다시 확인하므로 안전합니다.
+const qKey = () => 'mafia:q:' + S.code;
+const loadQ = () => { const q = store.get(qKey()); return Array.isArray(q) ? q : []; };
+let flushing = false;
+async function flushQueue() {
+  if (flushing || !S.token) return;
+  const q = loadQ();
+  if (!q.length) return;
+  flushing = true;
+  try {
+    const left = [];
+    for (const item of q) {
+      const r = await postJSON('/api/act', { code: S.code, token: S.token, action: 'play', taskId: item.taskId, result: item.result });
+      if (r.network || r.status >= 500) { left.push(item); continue; }
+      if (r.ok) toast('✅ 연결되어 저장해 둔 미니게임 완료를 보냈습니다. ' + ((r.result && r.result.message) || ''), 'good', 3500);
+      if (r.view) { syncClock(r.view); const prev = S.view; S.view = r.view; onChange(prev, r.view); render(); }
+    }
+    if (left.length) store.set(qKey(), left); else store.del(qKey());
+  } finally { flushing = false; }
+}
+setInterval(() => { if (S.online) flushQueue(); }, 5000);
+
+// ───── 회의 알림(푸시) 상태 ─────
+async function initPush() {
+  if (!Push.supported() || !(await Push.serverSupports())) { S.push = 'unsupported'; return; }
+  if (Push.iosNeedsInstall()) S.push = 'ios';
+  else if (Push.permission() === 'granted') S.push = await Push.subscribe(S.code, S.token, false).catch(() => 'error');
+  else S.push = Push.permission();
+  if (S.view && ['lobby', 'briefing'].includes(S.view.phase)) render();
+}
+function pushCard() {
+  const st = S.push;
+  if (!st || st === 'unsupported') return '';
+  if (st === 'granted') return '<div class="card good center small">🔔 회의 알림 켜짐 — 화면이 꺼져 있어도 회의가 열리면 알려 줍니다</div>';
+  if (st === 'ios') return `<div class="card center"><h3>🔔 회의 알림 받기 (아이폰)</h3>
+    <p class="small">사파리 아래쪽 <b>공유 버튼(⬆)</b> → <b>홈 화면에 추가</b> → 홈 화면의 <b>야외 마피아</b> 아이콘으로 다시 열면 알림을 켤 수 있어요.</p></div>`;
+  if (st === 'denied') return '<div class="card center small muted">🔕 알림이 차단되어 있어요. 휴대폰 설정에서 이 사이트의 알림을 허용하면 회의 알림을 받을 수 있어요.</div>';
+  return `<div class="card center"><button class="primary" data-a="push" data-needs-online>🔔 회의 알림 받기</button>
+    <p class="small muted" style="margin-top:6px">화면이 꺼져 있어도 회의가 열리면 진동과 알림으로 알려 줍니다</p></div>`;
 }
 
 // ───────────── 상태 변화 반응 ─────────────
 function onChange(prev, v) {
+  Awake.set(v.settings && v.settings.keepAwake && !['lobby', 'ended'].includes(v.phase));
   if (!prev) {
     // 휴대폰 카메라로 QR(주소)을 열고 들어온 경우: 대기 중이면 이름표 연결, 게임 중이면 임무·신고
     if (S.pendingScan && v.phase !== 'briefing') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan(s), 300); }
@@ -205,6 +252,7 @@ function askPlace(qr) {
 
 // 회의가 열리면 화면 전체로 크게 알립니다. 누르면 닫힙니다.
 function meetingAlarm(v) {
+  Sound.siren();
   const m = v.meeting || {};
   document.querySelectorAll('.alarm').forEach(x => x.remove());
   const el = document.createElement('div');
@@ -219,14 +267,25 @@ function meetingAlarm(v) {
   setTimeout(() => el.remove(), 10000);
 }
 
+function queuePlay(taskId, result) {
+  const q = loadQ().filter(x => x.taskId !== taskId);
+  q.push({ taskId, result, at: Date.now() });
+  store.set(qKey(), q);
+  toast('📶 연결이 끊겨 완료를 저장해 두었어요. 연결되면 자동으로 보냅니다.', '', 4000);
+}
+
 function openGame(taskId, game, data, readyAt) {
   S.gameTask = taskId;
   Games.open({ game, data }, async (result) => {
     // 서버가 받는 최소 시간 전이면 잠깐 기다렸다 보냅니다.
     const wait = (readyAt || 0) - serverNow() + 300;
     if (wait > 0) await new Promise(r => setTimeout(r, wait));
-    const x = await act('play', { taskId, result });
-    if (x && x.message) toast('✅ ' + x.message, 'good', 3000);
+    if (!S.online) return queuePlay(taskId, result);
+    const r = await postJSON('/api/act', { code: S.code, token: S.token, action: 'play', taskId, result });
+    if (r.network || r.status >= 500) return queuePlay(taskId, result);
+    if (r.view) { syncClock(r.view); const prev = S.view; S.view = r.view; onChange(prev, r.view); render(); }
+    if (!r.ok) return toast(r.error, 'bad', 3200);
+    if (r.result && r.result.message) toast('✅ ' + r.result.message, 'good', 3000);
   });
 }
 
@@ -327,25 +386,34 @@ function render() {
 }
 
 function viewLobby(v) {
+  const tag = v.me.tag, readyN = v.roster.filter(r => r.ready).length;
+  // 1단계: 이름표 QR 연결 → 2단계: 준비 완료. 이름표를 연결해야 준비할 수 있습니다.
+  const step1 = tag
+    ? `<div class="card good center"><div class="stepno">1단계 완료</div><h3>내 이름표</h3><div class="big">🏷 ${String(tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 목걸이를 차세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
+    : `<div class="card hl center"><div class="stepno">1단계</div><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표 뒷면의 QR을 찍으세요.</p>
+        <button class="primary" data-a="scan" data-needs-online>📷 내 이름표 QR 찍기</button></div>`;
+  const step2 = !tag
+    ? `<div class="readybox locked"><div class="stepno">2단계</div><div class="rb-main">🔒 준비 완료</div><p>이름표를 연결하면 누를 수 있어요</p></div>`
+    : v.me.ready
+      ? `<div class="readybox done"><div class="stepno">2단계 완료</div><div class="rb-main">✔ 준비 완료</div><p>진행자가 역할을 배정할 때까지 기다리세요</p>
+          <button class="ghostbtn sm" data-a="ready" data-needs-online>준비 취소</button></div>`
+      : `<button class="readybox go" data-a="ready" data-needs-online><span class="stepno">2단계</span><span class="rb-main">✋ 준비 완료 누르기</span><span class="rb-sub">이름표를 찼으면 눌러 주세요</span></button>`;
   return `
     <div class="card hl center">
       <div class="phase">대기 중 · 방 ${esc(v.code)}</div>
       <div class="big" style="margin:8px 0">${esc(v.me.name)}</div>
-      <p class="muted small">진행자가 역할을 배정할 때까지 기다리세요.</p>
-      <button class="${v.me.ready ? 'good' : 'primary'}" data-a="ready" data-needs-online style="margin-top:12px">${v.me.ready ? '✔ 준비 완료 (누르면 취소)' : '준비 완료 누르기'}</button>
     </div>
-    ${v.me.tag
-      ? `<div class="card good center"><h3>내 이름표</h3><div class="big">🏷 ${String(v.me.tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 목걸이를 차세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
-      : `<div class="card hl center"><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표 뒷면의 QR을 찍으세요.</p>
-          <button class="primary" data-a="scan" data-needs-online>📷 내 이름표 QR 찍기</button></div>`}
+    ${step1}
+    ${step2}
+    ${pushCard()}
+    <div class="card">
+      <div class="row"><h3 style="margin:0">입장한 사람 ${v.roster.length}명</h3><b class="readycount">준비 ${readyN} / ${v.roster.length}</b></div>
+      <ul class="list" style="margin-top:8px">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="pill ready">✔ 준비 완료</span>' : '<span class="pill wait">준비 중</span>'}</li>`).join('')}</ul>
+    </div>
     <div class="card">
       <h3>복구 코드</h3>
       <p><span class="kbd" style="font-size:24px">${esc(v.me.recovery)}</span></p>
       <p class="muted small">휴대폰을 바꾸거나 화면이 사라지면 이 코드로 다시 들어옵니다. 다른 사람에게 보여 주지 마세요.</p>
-    </div>
-    <div class="card">
-      <h3>입장한 사람 ${v.roster.length}명</h3>
-      <ul class="list">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="chip alive">준비</span>' : ''}</li>`).join('')}</ul>
     </div>
     ${rulesCard()}
     <p class="center small"><a href="/practice" target="_blank" style="color:var(--accent)">🎮 기다리는 동안 미니게임 연습하기</a></p>`;
@@ -386,7 +454,8 @@ function viewBriefing(v) {
     </div>
     ${v.me.ack ? '<div class="card good center">✔ 확인 완료. 진행자가 시작할 때까지 기다리세요.</div>'
       : '<button class="primary" data-a="ack" data-needs-online>역할과 규칙을 확인했습니다</button>'}
-    <p class="center muted small" style="margin-top:12px">확인 ${v.roster.filter(r => r.ack).length} / ${v.roster.length}명</p>`;
+    <p class="center muted small" style="margin-top:12px">확인 ${v.roster.filter(r => r.ack).length} / ${v.roster.length}명</p>
+    ${pushCard()}`;
 }
 
 function taskCard(v) {
@@ -543,6 +612,12 @@ app.addEventListener('click', (e) => {
   if (a === 'toggleRole') { S.roleShown = !S.roleShown; return render(); }
   if (a === 'toggleSecret') { S.secretOpen = !S.secretOpen; return render(); }
   if (a === 'ready') return act('ready', { ready: !v.me.ready });
+  if (a === 'push') {
+    return Push.subscribe(S.code, S.token, true).then(st => {
+      S.push = st; render();
+      toast(st === 'granted' ? '🔔 회의 알림을 켰습니다' : st === 'denied' ? '알림이 차단되었습니다' : '알림을 켜지 못했습니다', st === 'granted' ? 'good' : 'bad');
+    }).catch(() => toast('알림을 켜지 못했습니다', 'bad'));
+  }
   if (a === 'ack') return act('ack');
   if (a === 'scan') return openScan();
   if (a === 'kill') return openKill();

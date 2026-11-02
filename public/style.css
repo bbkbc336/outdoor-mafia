@@ -330,3 +330,58 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 /* 암살 성공 시 마피아 화면이 붉게 한 번 반짝임 */
 .killflash { position: fixed; inset: 0; z-index: 95; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255, 40, 60, 0.25), rgba(200, 0, 25, 0.85)); animation: killflash 0.8s ease-out forwards; }
 @keyframes killflash { 0% { opacity: 0; } 15% { opacity: 1; } 100% { opacity: 0; } }
+
+/* 대기실: 단계 표시와 준비 상태 */
+.stepno { font-size: 13px; font-weight: 900; letter-spacing: 1px; color: var(--accent); }
+.readybox { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin: 12px 0; padding: 22px 16px; border-radius: 20px; text-align: center; border: 3px solid var(--line); background: var(--panel); }
+.readybox .rb-main { font-size: 30px; font-weight: 900; line-height: 1.2; }
+.readybox p, .readybox .rb-sub { margin: 0; font-size: 15px; font-weight: 700; }
+.readybox.locked { opacity: .55; border-style: dashed; }
+.readybox.go { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); box-shadow: 0 0 0 0 rgba(255, 210, 63, .6); }
+.readybox.go .stepno { color: var(--accent-ink); }
+.readybox.done { background: #10301f; border-color: var(--good); color: var(--good); }
+.readybox.done .stepno { color: var(--good); }
+.readybox.done .ghostbtn { margin-top: 6px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .readybox.go { animation: ready-pulse 1.6s ease-out infinite; } }
+@keyframes ready-pulse { 70% { box-shadow: 0 0 0 14px rgba(255, 210, 63, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 210, 63, 0); } }
+.readycount { flex: 0; white-space: nowrap; color: var(--good); }
+.pill { flex: 0; white-space: nowrap; font-size: 14px; font-weight: 900; padding: 4px 10px; border-radius: 999px; }
+.pill.ready { background: var(--good); color: #052b16; }
+.pill.wait { border: 2px solid var(--line); color: var(--muted); }
+
+/* ───── 진행자용 큰 화면 (/screen) ───── */
+body.screen { background: #05070f; }
+.scr { max-width: none; min-height: 100dvh; padding: 3vh 4vw; display: flex; flex-direction: column; gap: 3vh; color: #f4f7fb;
+  background: radial-gradient(ellipse 120% 40% at 50% 115%, #2b7de0 0, #0f2a6e 18%, transparent 40%), radial-gradient(ellipse at 50% 25%, #0b1330, #05070f 75%); }
+.scr-wait { margin: auto; font-size: 3vw; }
+.scr-head { display: flex; justify-content: space-between; align-items: center; font-family: 'Black Han Sans', sans-serif; font-size: 2.6vw; color: #ffd23f; }
+.scr-phase { font-family: 'Black Han Sans', sans-serif; color: #3fd0ff; }
+.scr-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.5vh; text-align: center; }
+.scr-title { font-family: 'Black Han Sans', sans-serif; font-size: 9vw; line-height: 1; color: #fff; -webkit-text-stroke: .4vw #9ff5c9; paint-order: stroke fill; text-shadow: 0 .5vw 0 #1f56d6, 0 1vw 0 #122f86; }
+.scr-title.red { -webkit-text-stroke-color: #ffd23f; text-shadow: 0 .5vw 0 #d3132f, 0 1vw 0 #7d0012; }
+.scr-big { font-family: 'Orbitron', 'Black Han Sans', sans-serif; font-weight: 900; font-size: 12vw; line-height: 1; color: #ffd23f; }
+.scr-kicker { font-size: 2.4vw; font-weight: 900; color: #9ff5c9; letter-spacing: .2em; }
+.scr-sub { font-size: 2.4vw; margin: 0; max-width: 80vw; }
+.scr-place { font-size: 3.4vw; margin: 0; } .scr-place b { color: #ffd23f; }
+.scr-timer { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 10vw; line-height: 1; color: #fff; }
+.scr-timer.urgent { color: #ff4d5e; }
+.scr-out { font-size: 2.2vw; color: #ffb3bc; }
+.scr-bar { position: relative; width: 70vw; height: 4vw; border-radius: 2vw; background: #0a0c10; border: .3vw solid #3fd0ff; overflow: visible; }
+.scr-bar > div { height: 100%; border-radius: 2vw; background: linear-gradient(90deg, #3ddc84, #b6f36b); transition: width .6s; }
+.scr-bar i { position: absolute; top: -1vw; bottom: -1vw; width: .4vw; background: #ffd23f; }
+.alarm-bg { animation: scr-alarm 1s ease-in-out infinite alternate; border-radius: 3vw; }
+@keyframes scr-alarm { from { background: rgba(211, 19, 47, .05); } to { background: rgba(211, 19, 47, .35); } }
+@media (prefers-reduced-motion: reduce) { .alarm-bg { animation: none; background: rgba(211, 19, 47, .25); } }
+.scr-grid { flex: 1; display: grid; grid-template-columns: auto 1fr; gap: 5vw; align-items: center; }
+.scr-join { background: #fff; padding: 2vw; border-radius: 2vw; text-align: center; }
+.scr-join img { width: 34vw; max-width: 60vh; display: block; }
+.scr-url { color: #111; font-size: 1.6vw; margin: 1vw 0 0; font-weight: 700; }
+.scr-code { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 10vw; letter-spacing: .2em; color: #ffd23f; line-height: 1.1; }
+.scr-stats { display: flex; gap: 4vw; margin: 2vh 0; font-size: 2vw; } .scr-stats b { display: block; font-size: 6vw; font-family: 'Orbitron', sans-serif; } .scr-stats b.ok { color: #3ddc84; }
+.scr-names, .scr-tally, .scr-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 1vw; justify-content: center; }
+.scr-names li { font-size: 2vw; padding: .6vw 1.4vw; border-radius: 99vw; border: .25vw solid #3a4258; }
+.scr-names li.ready { background: #3ddc84; color: #052b16; border-color: #3ddc84; font-weight: 900; }
+.scr-tally li, .scr-roles li { font-size: 2.4vw; padding: 1vw 2vw; border-radius: 1.2vw; background: #171a22; display: flex; gap: 1.5vw; }
+.scr-roles li.mafia { background: #5a0a1a; } .scr-roles li.mafia b { color: #ff8a95; } .scr-roles li.citizen b { color: #8fdcff; }
+.scr-sound { width: auto; min-height: 0; font-family: inherit; font-size: 1.6vw; padding: 1.2vw 2.4vw; background: #ffd23f; color: #1a1400; border: 0; border-radius: 99vw; font-weight: 900; }
+@media (max-width: 700px) { .scr-grid { grid-template-columns: 1fr; } }

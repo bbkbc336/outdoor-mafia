@@ -15,10 +15,11 @@
   "durable_objects": {
     "bindings": [
       { "name": "ROOMS", "class_name": "Room" },
-      { "name": "LIMITS", "class_name": "Limiter" }
+      { "name": "LIMITS", "class_name": "Limiter" },
+      { "name": "KEYS", "class_name": "Keys" }
     ]
   },
   // 무료 요금제에서도 쓸 수 있는 SQLite 기반 Durable Object
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room", "Limiter"] }],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room", "Limiter", "Keys"] }],
   "observability": { "enabled": true }
 }

@@ -23,6 +23,10 @@
     {
       "source": "/practice",
       "destination": "/practice.html"
+    },
+    {
+      "source": "/screen",
+      "destination": "/screen.html"
     }
   ]
 }
