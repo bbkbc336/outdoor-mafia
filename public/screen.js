@@ -96,12 +96,22 @@ function viewOf(v) {
   }
 }
 
+// 한켠의 생존자 목록. 아직 발견되지 않은 사망자는 살아 있는 사람으로 보입니다(공개 정보만).
+function alivePanel(v) {
+  const ps = v.players || [];
+  const alive = ps.filter(p => !pubOut(p)), out = ps.filter(pubOut);
+  return `<aside class="scr-alive"><div class="sa-head">생존 <b>${alive.length}</b>명</div>
+    <ul>${alive.map(p => `<li>${esc(p.name)}</li>`).join('')}</ul>
+    ${out.length ? `<div class="sa-head out">탈락 <b>${out.length}</b>명</div><ul class="out">${out.map(p => `<li>${esc(p.name)}<small>${p.status === 'ejected' ? '추방' : '사망'}</small></li>`).join('')}</ul>` : ''}</aside>`;
+}
+
 function render() {
   const v = SC.view;
   if (!v) return;
+  const side = !['lobby', 'ended'].includes(v.phase);
   root.innerHTML = `<main class="scr">
     <header class="scr-head"><span>🕵️ 야외 마피아</span>${!Sound.ready() ? '<button class="scr-sound" id="snd">🔊 눌러서 소리·음성 안내 켜기</button>' : ''}<span class="scr-phase">${esc(PHASE_NAME[v.phase] || '')}${v.paused ? ' · ⏸ 일시 정지' : ''}</span></header>
-    ${viewOf(v)}</main>`;
+    ${side ? `<div class="scr-body"><section class="scr-mainview">${viewOf(v)}</section>${alivePanel(v)}</div>` : viewOf(v)}</main>`;
   const b = document.getElementById('snd');
   if (b) b.onclick = () => { Sound.unlock(); say('소리 안내를 켰습니다.'); setTimeout(render, 300); };
 }
