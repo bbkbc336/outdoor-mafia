@@ -10,8 +10,8 @@
     "test:redis": "node -e \"process.env.TEST_REDIS=1;require('./test/rules.test.js')\"",
     "test:e2e": "node test/e2e/playthrough.js",
     "test:edge": "node test/e2e/edgecases.js",
-    "cf:dev": "npx wrangler@4.151.0 dev",
-    "cf:deploy": "npx wrangler@4.151.0 deploy"
+    "cf:dev": "npx wrangler@4.160.0 dev",
+    "cf:deploy": "npx wrangler@4.160.0 deploy"
   },
   "engines": {
     "node": ">=18"

@@ -1,6 +1,6 @@
 // Cloudflare Workers 배포 설정. 배포: npx wrangler deploy (Cloudflare 계정 로그인 필요)
 {
-  "$schema": "https://unpkg.com/wrangler@4.151.0/config-schema.json",
+  "$schema": "https://unpkg.com/wrangler@4.160.0/config-schema.json",
   "name": "outdoor-mafia",
   "main": "cf/worker.js",
   "compatibility_date": "2025-10-01",
