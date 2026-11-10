@@ -52,6 +52,7 @@ function renderHome(mode = 'join', err = '') {
       </form>
       <button class="ghostbtn" id="toJoin" style="margin-top:10px">처음 입장하기</button>`}
     </div>
+    <a class="guidebtn" href="/guide${S.code ? '?room=' + encodeURIComponent(S.code) : ''}">📖 규칙 카드뉴스 보기 <span>11장 · 1분</span></a>
     <p class="center small"><a href="/practice" style="color:var(--accent)">🎮 미니게임 연습하기</a></p>
     <p class="center small muted">진행자이신가요? <a href="/host" style="color:var(--accent)">방 만들기</a></p>
   </main>`;
@@ -406,6 +407,7 @@ function viewLobby(v) {
     ${step1}
     ${step2}
     ${pushCard()}
+    <a class="guidebtn" href="/guide?room=${encodeURIComponent(v.code)}">📖 규칙 카드뉴스 보기 <span>기다리는 동안 읽어 보세요</span></a>
     <div class="card">
       <div class="row"><h3 style="margin:0">입장한 사람 ${v.roster.length}명</h3><b class="readycount">준비 ${readyN} / ${v.roster.length}</b></div>
       <ul class="list" style="margin-top:8px">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="pill ready">✔ 준비 완료</span>' : '<span class="pill wait">준비 중</span>'}</li>`).join('')}</ul>

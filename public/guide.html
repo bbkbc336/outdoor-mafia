@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0f14">
+<title>야외 마피아 · 규칙 카드뉴스</title>
+<meta property="og:title" content="야외 마피아 · 규칙 카드뉴스">
+<meta property="og:description" content="11장으로 보는 게임 방법">
+<meta property="og:image" content="https://outdoor-mafia.bbkbc-3b9.workers.dev/guide/01.jpg">
+<script src="/kakao.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0f14;color:#f4f6fb;font:16px/1.5 system-ui,-apple-system,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;word-break:keep-all}
+  header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:rgba(13,15,20,.92);backdrop-filter:blur(8px);border-bottom:1px solid #2c3242}
+  header b{font-size:17px}
+  header span{color:#a3abbf;font-size:14px;font-variant-numeric:tabular-nums}
+  main{max-width:540px;margin:0 auto;padding:12px 16px 120px;display:flex;flex-direction:column;gap:14px}
+  img{display:block;width:100%;height:auto;aspect-ratio:4/5;border-radius:16px;background:#171a22}
+  .go{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));max-width:508px;margin:0 auto;display:block;text-align:center;
+    padding:16px;border-radius:14px;background:#ffd23f;color:#1a1400;font-weight:800;font-size:18px;text-decoration:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<header><b>🕵️ 야외 마피아 규칙</b><span id="pos">1 / 11</span></header>
+<main id="cards"></main>
+<a class="go" id="go" href="/">게임 입장하기</a>
+<script>
+  // 카드뉴스 11장을 위아래로 넘겨 봅니다. ?room=ABCD 로 열면 아래 버튼이 그 방 입장으로 갑니다.
+  var names = ['표지', '입장하기', '이름표 연결', '역할 확인', '팀과 목표', '임무하기', '미니게임 10종', '암살과 쓰러짐', '신고와 긴급회의', '회의와 투표', '꼭 지켜요'];
+  var box = document.getElementById('cards'), pos = document.getElementById('pos');
+  names.forEach(function (n, i) {
+    var img = document.createElement('img');
+    img.src = '/guide/' + String(i + 1).padStart(2, '0') + '.jpg';
+    img.alt = (i + 1) + '. ' + n;
+    img.width = 864; img.height = 1080;
+    if (i > 1) img.loading = 'lazy';
+    img.dataset.i = i + 1;
+    box.appendChild(img);
+  });
+  var room = (new URLSearchParams(location.search).get('room') || '').toUpperCase();
+  if (/^[A-Z0-9]{4}$/.test(room)) {
+    var go = document.getElementById('go');
+    go.href = '/?room=' + room;
+    go.textContent = '방 ' + room + ' 입장하기';
+  }
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) pos.textContent = e.target.dataset.i + ' / ' + names.length; });
+    }, { rootMargin: '-45% 0px -45% 0px' });
+    box.querySelectorAll('img').forEach(function (im) { io.observe(im); });
+  }
+</script>
+</body>
+</html>

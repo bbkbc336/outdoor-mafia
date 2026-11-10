@@ -122,6 +122,7 @@ function tabRun(v) {
     ? (v.paused ? '<button class="good" data-run="unpause">일시 정지 해제 (게임 재개)</button>' : '<button data-run="pause">일시 정지</button>') : '';
 
   if (v.phase === 'lobby') {
+    setTimeout(loadGuideFiles, 1500); // 카드뉴스 이미지 공유용으로 미리 받아 둠
     const m = v.settings.mafiaCount, n = k.total;
     const okSetup = n >= 3 && m < n - m;
     const noTag = v.players.filter(p => !p.tag);
@@ -130,7 +131,13 @@ function tabRun(v) {
         <div class="big" style="font-size:44px;letter-spacing:6px">${esc(v.code)}</div>
         <div class="qrbox"><img src="/qr.svg?text=${encodeURIComponent(joinUrl)}" alt="입장 QR"></div>
         <p class="small muted" style="word-break:break-all">${esc(joinUrl)}</p>
-        <button class="sm" data-run="copyJoin">입장 링크 복사</button>
+        <button class="primary" data-run="shareJoin">💬 카톡으로 초대 보내기</button>
+        <p class="small muted" style="margin-top:6px">입장 링크와 규칙 카드뉴스 링크가 함께 가요</p>
+        <div class="row" style="gap:8px;margin-top:8px;justify-content:center;flex-wrap:wrap">
+          <button class="sm" data-run="shareCards">🖼 카드뉴스 이미지 보내기</button>
+          <button class="sm" data-run="copyJoin">링크 복사</button>
+          <a class="sm" href="/guide?room=${esc(v.code)}" target="_blank" rel="noopener" style="color:var(--accent);align-self:center">카드뉴스 보기</a>
+        </div>
       </div>
       <div class="grid2"><div class="stat"><b>${n}</b>입장</div><div class="stat"><b>${v.players.filter(p => p.ready).length}</b>준비</div></div>
       <div class="card"><p>배정 예정: 마피아 <b>${m}</b>명 · 시민 <b>${Math.max(0, n - m)}</b>명 <button class="sm" data-tab="settings">변경</button></p>
@@ -362,6 +369,49 @@ function tabLog(v) {
 }
 
 // ───────────── 이벤트 ─────────────
+// ───────────── 초대 공유 (입장 링크 + 규칙 카드뉴스) ─────────────
+const GUIDE_N = 11;
+let guideFiles = null, guideLoading = null;
+function loadGuideFiles() {
+  if (guideFiles || guideLoading || !navigator.canShare) return guideLoading;
+  guideLoading = Promise.all(Array.from({ length: GUIDE_N }, async (_, i) => {
+    const n = String(i + 1).padStart(2, '0');
+    const b = await (await fetch(`/guide/${n}.jpg`)).blob();
+    return new File([b], `야외마피아_규칙_${n}.jpg`, { type: 'image/jpeg' });
+  })).then(f => { guideFiles = f; }).catch(() => { guideFiles = []; }).finally(() => { guideLoading = null; });
+  return guideLoading;
+}
+function inviteText(code) {
+  return `🕵️ 야외 마피아에 초대합니다!\n방 코드: ${code}\n\n① 입장하기\n${location.origin}/?room=${code}\n\n② 규칙 카드뉴스 (먼저 읽어 주세요)\n${location.origin}/guide?room=${code}`;
+}
+async function shareInvite(kind, code) {
+  try {
+    if (kind === 'shareCards') {
+      // 카드뉴스 이미지 11장을 그대로 보냅니다(휴대폰 공유창 → 카카오톡). 안 되는 기기면 카드뉴스 링크를 공유합니다.
+      if (navigator.canShare) {
+        // 아이폰 사파리는 버튼을 누른 그 순간에만 공유창을 열어 줍니다. 그래서 미리 받아 둔 파일로 바로 엽니다.
+        const ready = guideFiles;
+        if (!ready) {
+          toast('카드뉴스를 준비하는 중… 잠시 후 한 번 더 눌러 주세요.', '', 2500);
+          await loadGuideFiles();
+          return;
+        }
+        if (ready.length && navigator.canShare({ files: ready })) { await navigator.share({ files: ready }); return; }
+      }
+      const url = `${location.origin}/guide?room=${code}`;
+      if (navigator.share) { await navigator.share({ title: '야외 마피아 규칙 카드뉴스', url }); return; }
+      await navigator.clipboard.writeText(url); toast('이 기기는 이미지 공유가 안 돼서 카드뉴스 링크를 복사했습니다.', 'good', 3500);
+      return;
+    }
+    const text = inviteText(code);
+    if (navigator.share) { await navigator.share({ title: '야외 마피아 초대', text }); return; }
+    await navigator.clipboard.writeText(text); toast('초대 문구를 복사했습니다. 카톡에 붙여 넣으세요.', 'good', 3500);
+  } catch (err) {
+    if (err && err.name === 'AbortError') return; // 공유창을 닫은 경우
+    prompt('복사하세요', inviteText(code));
+  }
+}
+
 app.addEventListener('click', async (e) => {
   const tab = e.target.closest('[data-tab]');
   if (tab) { H.tab = tab.dataset.tab; if (H.tab === 'places') H.locDraft = null; if (H.tab === 'missions') H.misDraft = null; return render(); }
@@ -369,8 +419,9 @@ app.addEventListener('click', async (e) => {
   const run = e.target.closest('[data-run]');
   if (run && !run.disabled) {
     const a = run.dataset.run, v = H.view;
+    if (a === 'shareJoin' || a === 'shareCards') return shareInvite(a, v.code);
     if (a === 'copyJoin' || a === 'copyHost' || a === 'copyScreen') {
-      const text = a === 'copyJoin' ? `${location.origin}/?room=${v.code}`
+      const text = a === 'copyJoin' ? inviteText(v.code)
         : a === 'copyScreen' ? `${location.origin}/screen?code=${v.code}&key=${encodeURIComponent(H.token)}`
         : `${location.origin}/host?code=${v.code}&key=${encodeURIComponent(H.token)}`;
       try { await navigator.clipboard.writeText(text); toast('복사했습니다.', 'good'); } catch (_) { prompt('복사하세요', text); }

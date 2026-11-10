@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { chromium, devices } = require('playwright');
 
-const B = process.argv[2] || 'https://outdoor-mafia.vercel.app';
+const B = process.argv[2] || 'https://outdoor-mafia.bbkbc-3b9.workers.dev';
 const OUT = path.join(__dirname, '..', '..', 'shots');
 fs.mkdirSync(OUT, { recursive: true });
 const PHONE = { ...devices['Galaxy S9+'], locale: 'ko-KR', acceptDownloads: true };

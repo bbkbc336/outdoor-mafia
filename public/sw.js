@@ -1,7 +1,7 @@
 // 서비스 워커: (1) 앱 화면·파일을 휴대폰에 저장해 전파가 약해도 화면이 열리게, (2) 회의 소집 알림(푸시)을 띄웁니다.
 // 파일은 항상 인터넷에서 먼저 받고(최신 유지), 실패할 때만 저장본을 씁니다. 게임 데이터(/api)는 저장하지 않습니다.
 const CACHE = 'mafia-v1';
-const SHELL = ['/', '/index.html', '/host.html', '/practice.html', '/screen.html', '/style.css', '/common.js', '/app.js', '/games.js',
+const SHELL = ['/', '/index.html', '/host.html', '/practice.html', '/screen.html', '/guide.html', '/style.css', '/common.js', '/app.js', '/games.js',
   '/scanner.js', '/host.js', '/screen.js', '/kakao.js', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {

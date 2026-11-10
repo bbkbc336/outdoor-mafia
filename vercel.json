@@ -27,6 +27,10 @@
     {
       "source": "/screen",
       "destination": "/screen.html"
+    },
+    {
+      "source": "/guide",
+      "destination": "/guide.html"
     }
   ]
 }

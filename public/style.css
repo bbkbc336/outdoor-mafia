@@ -411,3 +411,7 @@ body.screen { background: #05070f; }
 .wl.wait li.none { border-color: #3ddc84; color: #3ddc84; }
 .wl.done li { font-size: 1.5vw; font-weight: 700; padding: .4vw 1vw; border-radius: 99vw; background: #3ddc84; color: #052b16; }
 .scr-center .scr-wait-lists { max-width: 80%; }
+
+/* 규칙 카드뉴스 바로가기 */
+.guidebtn { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--accent); background: var(--panel); color: var(--text); font-weight: 800; text-decoration: none; text-align: center; }
+.guidebtn span { font-weight: 600; font-size: 14px; color: var(--muted); }
