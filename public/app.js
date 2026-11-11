@@ -490,14 +490,17 @@ function viewActive(v) {
   const emLeft = serverNow() < v.emergencyReadyAt;
   // 비밀 메뉴는 살아 있는 모두에게 똑같이 보입니다. 닫힌 상태로는 마피아인지 알 수 없고,
   // 시민이 열면 위장용 기지 상태 화면이 나옵니다.
-  const secretInner = !S.secretOpen ? '' : v.mafia ? `
-        <p class="small" style="margin:0 0 4px">마피아만 보는 화면입니다. 동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
+  // 비밀 패널: 위쪽 정보(생존자·회의 기록)는 모두 같고, 아래 빨간 버튼만 다릅니다.
+  // 마피아는 암살하기, 시민은 명단 크게 보기. 자리·크기가 같아 옆에서 봐도 구별되지 않습니다.
+  const bigRed = 'style="margin-top:10px;min-height:64px;font-size:21px"';
+  const secretInner = !S.secretOpen ? '' : secretInfo(v) + (v.mafia ? `
+        <p class="small" style="margin:10px 0 0">동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
         ${(() => {
           const ready = v.mafia.killReadyAt <= serverNow() && !v.paused;
-          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} style="margin-top:8px;min-height:64px;font-size:21px">${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
+          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} ${bigRed}>${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
         })()}`
-    : `<p class="small" style="margin:0 0 4px">🛰 기지 상태: <b style="color:var(--good)">정상</b></p>
-        <button class="danger" data-a="scanArea" style="margin-top:8px;min-height:64px;font-size:21px">🔦 주변 살피기</button>`;
+    : `<p class="small" style="margin:10px 0 0">명단은 회의에서 확인된 정보만 반영됩니다.</p>
+        <button class="danger" data-a="bigList" ${bigRed}>📋 명단 크게 보기</button>`);
   // 비밀 버튼은 아래 막대(엄지 자리)에 늘 있습니다. 누르면 막대 바로 위에 패널이 뜹니다.
   // 시민·마피아 모두 같은 자리, 같은 크기라 옆에서 봐도 구별되지 않습니다.
   const alive = me.status === 'alive';
@@ -518,6 +521,23 @@ function viewActive(v) {
       </button></div>` : ''}
     ${secretSheet}
     <div class="dock"><div class="inner">${secretBtn}<button class="primary" data-a="scan" data-needs-online>📷 QR 스캔</button></div></div>`;
+}
+
+// 비밀 패널 위쪽: 공개 정보만. 아직 발견되지 않은 사망자는 생존으로 보입니다.
+function secretInfo(v, big) {
+  const inP = v.roster.filter(r => r.pub === 'in'), out = v.roster.filter(r => r.pub !== 'in');
+  const hist = (v.history || []).slice().reverse();
+  const line = (h) => {
+    const what = h.trigger === 'report' ? `${esc(h.where || '장소 모름')}에서 ${esc(h.body || '')} 님 발견` : h.trigger === 'emergency' ? `긴급회의 (${esc(h.by || '')} 님 요청)` : '진행자가 소집';
+    return `<li><b>${h.no}차</b> ${what}${h.ejected ? ` <span class="out">→ ${esc(h.ejected)} 님 추방</span>` : ''}</li>`;
+  };
+  return `<div class="sinfo ${big ? 'big' : ''}">
+    <p class="sh">생존 <b>${inP.length}명</b></p>
+    <ul class="names">${inP.map(r => `<li${r.id === v.me.id ? ' class="me"' : ''}>${esc(r.name)}</li>`).join('')}</ul>
+    ${out.length ? `<p class="sh">탈락 <b>${out.length}명</b></p><ul class="names out">${out.map(r => `<li>${esc(r.name)}<small>${r.pub === 'dead' ? '사망' : '추방'}</small></li>`).join('')}</ul>` : ''}
+    <p class="sh">회의 기록</p>
+    ${hist.length ? `<ul class="hist">${(big ? hist : hist.slice(0, 2)).map(line).join('')}</ul>` : '<p class="small muted" style="margin:0">아직 회의가 없었습니다.</p>'}
+  </div>`;
 }
 
 // 비밀 버튼을 한 번이라도 열었는지(판마다). 열기 전까지는 모두의 버튼이 똑같이 깜빡입니다.
@@ -627,7 +647,7 @@ app.addEventListener('click', (e) => {
   if (a === 'ack') return act('ack');
   if (a === 'scan') return openScan();
   if (a === 'kill') return openKill();
-  if (a === 'scanArea') return toast('🔦 주변에 이상한 점이 없습니다.', '', 2500);
+  if (a === 'bigList') return openModal(`<h2>생존자와 회의 기록</h2>${secretInfo(S.view, true)}<button data-act="close" style="margin-top:16px">닫기</button>`);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
   if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge, t.readyAt); }

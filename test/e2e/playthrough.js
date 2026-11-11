@@ -301,7 +301,11 @@ async function doTask(page, codeOf, how) {
     const look = async (n) => P[n].locator('[data-a="toggleSecret"]').innerText();
     ok((await look(cit[0])) === (await look(mafia[0])), '닫힌 비밀 메뉴는 시민·마피아가 똑같음');
     await P[cit[0]].locator('[data-a="toggleSecret"]').tap();
-    ok(await P[cit[0]].locator('[data-a="scanArea"].danger').count() === 1 && !(await P[cit[0]].locator('[data-a="kill"]').count()), '시민이 열면 위장 화면 (암살 버튼 없음)');
+    ok(await P[cit[0]].locator('[data-a="bigList"].danger').count() === 1 && !(await P[cit[0]].locator('[data-a="kill"]').count()), '시민이 열면 같은 자리 빨간 버튼은 명단 보기 (암살 버튼 없음)');
+    ok(await P[cit[0]].locator('.secretsheet .sinfo .names li').count() === 12, '비밀 패널에 생존자 12명 명단');
+    await P[cit[0]].locator('[data-a="bigList"]').tap();
+    ok(await P[cit[0]].locator('.modal .sinfo.big').count() === 1, '명단 크게 보기 열림');
+    await P[cit[0]].locator('.modal [data-act="close"]').tap();
     await P[cit[0]].locator('[data-a="toggleSecret"]').tap();
 
     step('6. 미니게임 10종 (실제 터치)');

@@ -553,3 +553,19 @@ body {
 .killhow { margin: 10px 0 4px; font-size: 15px; line-height: 1.9; }
 .kbtn { display: inline-block; padding: 2px 10px; border-radius: 8px; font-weight: 800; background: #2a0d22; border: 2px solid #7a2346; color: #ffd0dc; white-space: nowrap; line-height: 1.4; }
 .kbtn.red { background: var(--bad); border-color: var(--bad); color: #fff; }
+
+/* 비밀 패널 정보: 생존자 이름표, 회의 기록 */
+.secretsheet { max-height: calc(100dvh - 190px); overflow-y: auto; }
+.sinfo .sh { margin: 0 0 6px; font-size: 14px; font-weight: 800; color: var(--mint); }
+.sinfo .sh b { color: #fff; }
+.sinfo .names { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.sinfo .names li { font-size: 15px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #17306f; }
+.sinfo .names li.me { outline: 2px solid var(--hud); }
+.sinfo .names.out li { background: transparent; border: 1px solid #5a2a40; color: #b9a3b0; text-decoration: line-through; }
+.sinfo .names.out small { margin-left: 4px; font-size: 12px; text-decoration: none; display: inline-block; }
+.sinfo .hist { list-style: none; margin: 0; padding: 0; font-size: 14px; line-height: 1.5; }
+.sinfo .hist li + li { margin-top: 4px; }
+.sinfo .hist b { color: var(--hud); margin-right: 4px; }
+.sinfo .hist .out { color: #ff9fb2; font-weight: 700; }
+.sinfo.big .names li { font-size: 18px; padding: 6px 14px; }
+.sinfo.big .hist { font-size: 16px; }
