@@ -438,7 +438,8 @@ function roleBlock(v, compact) {
   const mates = v.mafia ? v.mafia.mates : [];
   return `<div class="rolecard ${shown ? 'shown ' + role : ''}" data-a="toggleRole" ${compact ? 'style="padding:14px"' : ''}>
     ${shown ? `<div class="muted small">나의 역할</div><div class="rname" ${compact ? 'style="font-size:32px"' : ''}>${ROLE_NAME[role]}</div>
-      ${role === 'mafia' ? `<p>동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></p>` : ''}
+      ${role === 'mafia' ? `<p>동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></p>
+        <p class="killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></p>` : ''}
       <p class="small muted">눌러서 숨기기</p>`
     : `<div class="emoji">🂠</div><p style="font-weight:800">눌러서 역할 보기</p><p class="small muted">주변에서 보지 않게 확인하세요</p>`}
   </div>`;
@@ -451,7 +452,7 @@ function viewBriefing(v) {
     ${roleBlock(v)}
     <div class="card">
       ${role === 'mafia'
-        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>암살은 <b>손이 닿는 거리에서 직접 보고 있을 때만</b>. 대기시간이 있습니다.</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
+        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>암살: 게임이 시작되면 화면 아래 <b>🔒 비밀</b> 버튼 → <b>🔪 암살하기</b>. <b>손이 닿는 거리에서 직접 보고 있을 때만</b> 하세요. 대기시간이 있습니다.</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
         : `<p><b>시민 할 일</b></p><ul class="small" style="padding-left:20px"><li>안내되는 장소로 가서 QR을 찍어 임무를 완료하세요.</li><li>쓰러진 사람을 발견하면 이름표 QR로 신고하세요.</li><li>회의에서 수상한 사람을 찾아 투표하세요.</li></ul>`}
     </div>
     ${v.me.ack ? '<div class="card good center">✔ 확인 완료. 진행자가 시작할 때까지 기다리세요.</div>'
@@ -490,18 +491,18 @@ function viewActive(v) {
   // 비밀 메뉴는 살아 있는 모두에게 똑같이 보입니다. 닫힌 상태로는 마피아인지 알 수 없고,
   // 시민이 열면 위장용 기지 상태 화면이 나옵니다.
   const secretInner = !S.secretOpen ? '' : v.mafia ? `
-        <p class="small" style="margin-top:10px">동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
+        <p class="small" style="margin:0 0 4px">마피아만 보는 화면입니다. 동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
         ${(() => {
           const ready = v.mafia.killReadyAt <= serverNow() && !v.paused;
-          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} style="margin-top:8px">${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
+          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} style="margin-top:8px;min-height:64px;font-size:21px">${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
         })()}`
-    : `<p class="small" style="margin-top:10px">🛰 기지 상태: <b style="color:var(--good)">정상</b></p>
-        <button class="danger" data-a="scanArea" style="margin-top:8px">🔦 주변 살피기</button>`;
-  const secretPanel = me.status === 'alive' ? `
-    <div class="card">
-      <button class="ghostbtn sm" data-a="toggleSecret" style="width:100%">${S.secretOpen ? '비밀 메뉴 닫기' : '비밀 메뉴 열기'}</button>
-      ${secretInner}
-    </div>` : '';
+    : `<p class="small" style="margin:0 0 4px">🛰 기지 상태: <b style="color:var(--good)">정상</b></p>
+        <button class="danger" data-a="scanArea" style="margin-top:8px;min-height:64px;font-size:21px">🔦 주변 살피기</button>`;
+  // 비밀 버튼은 아래 막대(엄지 자리)에 늘 있습니다. 누르면 막대 바로 위에 패널이 뜹니다.
+  // 시민·마피아 모두 같은 자리, 같은 크기라 옆에서 봐도 구별되지 않습니다.
+  const alive = me.status === 'alive';
+  const secretSheet = alive && S.secretOpen ? `<div class="secretsheet">${secretInner}</div>` : '';
+  const secretBtn = alive ? `<button class="secretbtn ${S.secretOpen ? 'on' : ''} ${seenSecret(v) ? '' : 'nudge'}" data-a="toggleSecret">${S.secretOpen ? '✕ 닫기' : '🔒 비밀'}</button>` : '';
   return `
     ${ghost ? '<div class="card" style="border-color:#34407a;background:#141a33"><b>👻 유령 상태</b><p class="small muted">말하거나 힌트를 주지 마세요. 임무는 계속 진행률에 반영됩니다(시민).</p></div>' : ''}
     ${taskCard(v)}
@@ -510,14 +511,17 @@ function viewActive(v) {
       <div class="progress" style="margin-top:8px"><div style="width:${Math.min(100, pr.pct)}%"></div></div>
       <p class="small muted">목표 ${pr.goal}% 달성 시 시민 승리</p>
     <!--/pr--></div>
-    ${secretPanel}
     ${roleBlock(v, true)}
     ${!ghost ? `<div class="card">
       <button class="ghostbtn" data-a="emergency" data-needs-online ${me.emergencyLeft <= 0 || emLeft ? 'data-off="1"' : ''}>
         📢 긴급회의 ${me.emergencyLeft <= 0 ? '(모두 사용됨)' : emLeft ? `<span data-until="${v.emergencyReadyAt}" data-unit="kr" data-suffix=" 후 가능" data-done="rerender"></span>` : `(전체 남은 ${me.emergencyLeft}회)`}
       </button></div>` : ''}
-    <div class="dock"><div class="inner"><button class="primary" data-a="scan" data-needs-online>📷 QR 스캔 / 코드 입력</button></div></div>`;
+    ${secretSheet}
+    <div class="dock"><div class="inner">${secretBtn}<button class="primary" data-a="scan" data-needs-online>📷 QR 스캔</button></div></div>`;
 }
+
+// 비밀 버튼을 한 번이라도 열었는지(판마다). 열기 전까지는 모두의 버튼이 똑같이 깜빡입니다.
+function seenSecret(v) { return !!store.get(`mafia:sec:${v.code}:${v.gameNo || 1}`); }
 
 function viewDead() {
   return `<div class="fullscreen deadscreen">
@@ -612,7 +616,7 @@ app.addEventListener('click', (e) => {
   if (!b || b.disabled) return;
   const v = S.view, a = b.dataset.a;
   if (a === 'toggleRole') { S.roleShown = !S.roleShown; return render(); }
-  if (a === 'toggleSecret') { S.secretOpen = !S.secretOpen; return render(); }
+  if (a === 'toggleSecret') { S.secretOpen = !S.secretOpen; if (S.view) store.set(`mafia:sec:${S.view.code}:${S.view.gameNo || 1}`, 1); return render(); }
   if (a === 'ready') return act('ready', { ready: !v.me.ready });
   if (a === 'push') {
     return Push.subscribe(S.code, S.token, true).then(st => {

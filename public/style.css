@@ -536,3 +536,20 @@ body {
 .topbar { background: rgba(4, 8, 23, .9); }
 .tabs { background: rgba(4, 8, 23, .96); }
 .game { background: #050b26; }
+
+/* 비밀 버튼: 아래 막대 왼쪽(엄지 자리). 시민·마피아 모두 같은 모양 */
+.dock .inner .secretbtn { flex: 0 0 38%; width: auto; background: #2a0d22; border-color: #7a2346; color: #ffd0dc; box-shadow: 0 4px 0 #14040f; }
+.dock .inner .secretbtn.on { background: var(--panel2); border-color: var(--line); color: var(--text); }
+.dock .inner .primary { flex: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .dock .inner .secretbtn.nudge { animation: sec-nudge 1.4s ease-out infinite; }
+}
+@keyframes sec-nudge { 0% { box-shadow: 0 4px 0 #14040f, 0 0 0 0 rgba(255, 90, 130, .7); } 70% { box-shadow: 0 4px 0 #14040f, 0 0 0 14px rgba(255, 90, 130, 0); } 100% { box-shadow: 0 4px 0 #14040f, 0 0 0 0 rgba(255, 90, 130, 0); } }
+/* 비밀 패널: 막대 바로 위에 뜸 */
+.secretsheet { position: fixed; left: 0; right: 0; z-index: 9; bottom: calc(92px + env(safe-area-inset-bottom)); margin: 0 auto; max-width: 528px; width: calc(100% - 32px);
+  padding: 14px 16px 16px; background: rgba(20, 6, 22, .97); border: 2px solid #7a2346; border-radius: 10px; box-shadow: 0 12px 40px rgba(0, 0, 0, .6); }
+@media (prefers-reduced-motion: no-preference) { .secretsheet { animation: m-up .2s ease-out; } }
+/* 역할 카드 안 암살 방법 안내(마피아 본인만 펼쳐 봄) */
+.killhow { margin: 10px 0 4px; font-size: 15px; line-height: 1.9; }
+.kbtn { display: inline-block; padding: 2px 10px; border-radius: 8px; font-weight: 800; background: #2a0d22; border: 2px solid #7a2346; color: #ffd0dc; white-space: nowrap; line-height: 1.4; }
+.kbtn.red { background: var(--bad); border-color: var(--bad); color: #fff; }
