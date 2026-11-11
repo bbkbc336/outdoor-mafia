@@ -73,7 +73,7 @@ async function act(action, extra = {}, okMsg) {
 function renderBars() {
   const v = H.view, top = $('#topbar');
   if (!v || !top) return;
-  top.innerHTML = `<span class="dot ${H.online ? '' : 'off'}"></span><span class="who">진행자 · 방 ${esc(v.code)} · ${v.gameNo}판</span>
+  top.innerHTML = `<span class="dot ${H.online ? '' : 'off'}"></span><span class="who">방 ${esc(v.code)} 진행 중 (${v.gameNo}판째)</span>
     <span class="chip">${esc(PHASE_NAME[v.phase])}${v.paused ? ' ⏸' : ''}</span>`;
 }
 

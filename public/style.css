@@ -415,3 +415,107 @@ body.screen { background: #05070f; }
 /* 규칙 카드뉴스 바로가기 */
 .guidebtn { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; padding: 14px 16px; border-radius: 16px; border: 2px solid var(--accent); background: var(--panel); color: var(--text); font-weight: 800; text-decoration: none; text-align: center; }
 .guidebtn span { font-weight: 600; font-size: 14px; color: var(--muted); }
+
+/* ═════════ 우주 오락실 테마 (인쇄 이름표·큰 화면과 같은 세계) ═════════
+   휴대폰은 '승무원 단말기'. 색은 인쇄물에서 가져옴: 깊은 우주 남색, 하늘색 HUD 선, 민트, 행동은 노랑.
+   눈에 띄는 것은 하나만: 큰 문장(역할·쓰러짐·회의)의 흰 글자 + 파란 입체 그림자. 나머지는 조용하게. */
+:root {
+  --bg: #0a1438;
+  --panel: #12205a;
+  --panel2: #172a6e;
+  --line: #2b4596;
+  --hud: #46c8ff;
+  --mint: #8ff0c8;
+  --text: #f2f6ff;
+  --muted: #a9b8e6;
+  --accent: #ffd23f;
+  --accent-ink: #1a1400;
+  --good: #47e39a;
+  --bad: #ff3b5c;
+  --blue: #46c8ff;
+  --well: #071033;
+  --display: 'Black Han Sans', system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  --digits: 'Orbitron', ui-rounded, system-ui, sans-serif;
+}
+html { background: var(--bg); }
+body {
+  background:
+    radial-gradient(130% 55% at 50% 118%, #1d55c8 0, rgba(29, 85, 200, .35) 30%, transparent 58%),
+    linear-gradient(rgba(70, 200, 255, .055) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(70, 200, 255, .055) 1px, transparent 1px) 0 0 / 28px 28px,
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* 제목: 굵은 오락실 글꼴은 네 순간에만 — 게임 이름, 내 역할, 쓰러짐, 회의 소집 */
+h1 { letter-spacing: -0.5px; }
+h3 { color: var(--mint); }
+.big { color: #fff; }
+h1.brand, .rolecard .rname, .alarm .big, .deadscreen .big, .meetingscreen .big {
+  font-family: var(--display); font-weight: 400; letter-spacing: 0; color: #fff; text-shadow: 0 3px 0 #1f56d6, 0 6px 0 #122f86; }
+h1.brand { font-size: 36px; }
+.rolecard.shown.mafia .rname, .deadscreen .big, .alarm.body .big { text-shadow: 0 3px 0 #d3132f, 0 6px 0 #7d0012; }
+.phase, .stepno { letter-spacing: 0; color: var(--hud); font-size: 15px; }
+.timer, .dialnow, .lcd span, .dialgoal span, .stat b { font-family: var(--digits); font-weight: 900; letter-spacing: 0; }
+.timer { color: #fff; font-size: 60px; }
+.timer.urgent { color: var(--bad); }
+
+/* 판: 같은 모서리를 되풀이하는 둥근 카드 대신, 한쪽 모서리를 깎은 HUD 판 */
+.card {
+  background: rgba(18, 32, 90, .86); border: 1px solid rgba(70, 200, 255, .38); border-radius: 3px;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+}
+.card.hl { border-color: rgba(70, 200, 255, .38); box-shadow: inset 4px 0 0 var(--accent); }
+.card.good { border-color: var(--good); box-shadow: inset 4px 0 0 var(--good); }
+.card.danger { background: rgba(70, 8, 30, .9); border-color: var(--bad); box-shadow: inset 4px 0 0 var(--bad); }
+
+/* 버튼: 오락실 버튼처럼 아래로 눌림. 미니게임 안의 버튼은 그대로 둠 */
+:where(button, .btn):not(.game *) { background: var(--panel2); border: 2px solid var(--line); border-radius: 10px; box-shadow: 0 4px 0 #050c26; }
+:where(button, .btn):not(.game *):active { transform: none; translate: 0 3px; box-shadow: 0 1px 0 #050c26; }
+:where(button, .btn):not(.game *):disabled { translate: none; box-shadow: none; }
+button.primary:not(.game *), .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 5px 0 #a87a00; }
+button.primary:not(.game *):active { box-shadow: 0 2px 0 #a87a00; }
+button.danger:not(.game *) { background: var(--bad); border-color: var(--bad); box-shadow: 0 5px 0 #8a0f25; }
+button.good:not(.game *) { background: var(--good); border-color: var(--good); color: #052b16; box-shadow: 0 5px 0 #17824f; }
+button.ghostbtn:not(.game *) { background: transparent; box-shadow: none; border-color: rgba(70, 200, 255, .38); }
+.tabs button { box-shadow: none !important; translate: none !important; }
+
+input, select, textarea { background: var(--well); border-color: var(--line); border-radius: 8px; }
+input:focus, select:focus, textarea:focus { border-color: var(--hud); box-shadow: 0 0 0 3px rgba(70, 200, 255, .25); }
+input.code { font-family: var(--digits); letter-spacing: 8px; color: var(--accent); }
+label { color: var(--mint); }
+:focus-visible { outline: 3px solid var(--hud); outline-offset: 2px; }
+
+.topbar { background: rgba(10, 20, 56, .93); border-bottom: 2px solid rgba(70, 200, 255, .4); }
+.tabs { background: var(--bg); border-bottom-color: rgba(70, 200, 255, .3); }
+.chip { background: var(--well); border-color: var(--line); }
+.modal .sheet { background: var(--panel); border-top: 3px solid var(--hud); }
+.toast { background: var(--panel2); border: 2px solid var(--hud); }
+.dock { background: linear-gradient(transparent, var(--bg) 30%); }
+.list li { border-bottom-color: rgba(70, 200, 255, .2); }
+.progress { background: var(--well); border-color: var(--line); height: 20px; border-radius: 4px; }
+.progress > div { background: repeating-linear-gradient(-45deg, var(--good) 0 10px, #39c785 10px 20px); }
+.stat { background: var(--well); border: 1px solid var(--line); border-radius: 4px; }
+.kbd, .qrbox { border-radius: 6px; }
+
+/* 역할 카드: 시민은 하늘색, 마피아는 붉은 경고. 숨긴 상태는 접힌 단말기 덮개 */
+.rolecard { border-radius: 6px; border: 3px dashed var(--line); background: var(--well); }
+.rolecard.shown.citizen { background: linear-gradient(180deg, #0f2f7a, #0b1d55); border: 3px solid var(--hud); }
+.rolecard.shown.mafia { background: linear-gradient(180deg, #5a0a26, #2e0616); border: 3px solid var(--bad); }
+
+/* 대기실 준비 버튼 */
+.readybox { border-radius: 8px; background: var(--panel); }
+.readybox.go { box-shadow: 0 5px 0 #a87a00, 0 0 0 0 rgba(255, 210, 63, .6); }
+.readybox.done { background: rgba(8, 60, 40, .85); }
+@keyframes ready-pulse { 70% { box-shadow: 0 5px 0 #a87a00, 0 0 0 14px rgba(255, 210, 63, 0); } 100% { box-shadow: 0 5px 0 #a87a00, 0 0 0 0 rgba(255, 210, 63, 0); } }
+.pill.wait { border-color: var(--line); }
+
+/* 전체 화면 상태 */
+.deadscreen { background: radial-gradient(circle at 50% 25%, #6a0f2c, rgba(10, 20, 56, 0) 72%); border-radius: 6px; }
+.meetingscreen { background: radial-gradient(circle at 50% 18%, #5a4300, rgba(10, 20, 56, 0) 72%); border-radius: 6px; }
+
+.guidebtn { border-radius: 8px; border: 2px solid rgba(70, 200, 255, .45); background: var(--panel); }
+.game { background: #081032; }
+.game .ghead { border-bottom: 2px solid rgba(70, 200, 255, .35); }
+.game .ghead b { font-weight: 900; }
+.game .gstep { font-family: var(--digits); }

@@ -27,7 +27,7 @@ const app = $('#app');
 // ───────────── 입장 ─────────────
 function renderHome(mode = 'join', err = '') {
   app.innerHTML = `<main>
-    <h1>🕵️ 야외 마피아</h1>
+    <h1 class="brand">🕵️ 야외 마피아</h1>
     ${S.notice ? `<div class="card danger">${esc(S.notice)}</div>` : ''}
     <div class="card">
       ${mode === 'join' ? `
@@ -52,7 +52,7 @@ function renderHome(mode = 'join', err = '') {
       </form>
       <button class="ghostbtn" id="toJoin" style="margin-top:10px">처음 입장하기</button>`}
     </div>
-    <a class="guidebtn" href="/guide${S.code ? '?room=' + encodeURIComponent(S.code) : ''}">📖 규칙 카드뉴스 보기 <span>11장 · 1분</span></a>
+    <a class="guidebtn" href="/guide${S.code ? '?room=' + encodeURIComponent(S.code) : ''}">📖 규칙 카드뉴스 보기 <span>1분이면 다 읽어요</span></a>
     <p class="center small"><a href="/practice" style="color:var(--accent)">🎮 미니게임 연습하기</a></p>
     <p class="center small muted">진행자이신가요? <a href="/host" style="color:var(--accent)">방 만들기</a></p>
   </main>`;
@@ -401,7 +401,7 @@ function viewLobby(v) {
       : `<button class="readybox go" data-a="ready" data-needs-online><span class="stepno">2단계</span><span class="rb-main">✋ 준비 완료 누르기</span><span class="rb-sub">이름표를 찼으면 눌러 주세요</span></button>`;
   return `
     <div class="card hl center">
-      <div class="phase">대기 중 · 방 ${esc(v.code)}</div>
+      <div class="phase">방 ${esc(v.code)}에서 기다리는 중</div>
       <div class="big" style="margin:8px 0">${esc(v.me.name)}</div>
     </div>
     ${step1}
@@ -474,7 +474,7 @@ function taskCard(v) {
   if (t.type === 'game') how = `<b>${esc(t.loc)}</b>에 가서 QR을 찍으세요.`;
   const label = t.title ? esc(t.title) : t.type === 'game' ? esc(t.gameName) : { visit: '방문 점검', carry: '물품 운반', report: '현장 보고' }[t.type];
   return `<div class="card hl">
-    <div class="row"><h3 style="margin:0">임무 ${t.index} / ${t.total} · ${label}</h3></div>
+    <div class="row"><h3 style="margin:0">${label} <span class="muted">(임무 ${t.index}/${t.total})</span></h3></div>
     <p style="font-size:20px;margin-top:8px">📍 ${how}</p>
     ${t.desc ? `<p class="small" style="color:var(--accent)">${esc(t.desc)}</p>` : ''}
     ${t.type === 'report' && t.step === 1 && t.options ? t.options.map(o => `<button class="choice" data-a="answer" data-task="${esc(t.id)}" data-opt="${esc(o)}" data-needs-online>${esc(o)}</button>`).join('') : ''}
