@@ -77,5 +77,39 @@ G.saveMissions(room, []);
 G.assignRoles(room);
 ok(G.list(room).every(x => x.tasks.length >= 1 && x.tasks.every(t => room.locations.some(l => l.id === t.loc))), '줄인 장소로 임무 배정');
 
+console.log('\n[암살: 이름표 QR 찍기 모드]');
+{
+  const r2 = G.createRoom(new Set());
+  ['가', '나', '다', '라', '마', '바'].forEach(n => G.join(r2, n));
+  G.assignTags(r2);
+  G.updateSettings(r2, { mafiaCount: 2, startProtect: 0, killByScan: true });
+  ok(r2.settings.killByScan === true, '설정 켜짐');
+  G.assignRoles(r2); G.startGame(r2, true);
+  const [m1, m2] = G.list(r2).filter(x => x.role === 'mafia');
+  const [c1, c2] = G.list(r2).filter(x => x.role === 'citizen');
+  m1.killReadyAt = 0;
+  throws(() => G.kill(r2, m1, c1.id, r2.phaseSeq), /이름표 QR을 찍어야/, '목록(이름)으로는 암살 불가');
+  throws(() => G.kill(r2, m1, null, r2.phaseSeq, r2.locations[0].code), /이름표 QR을 찍어야/, '장소 QR로는 불가');
+  throws(() => G.kill(r2, m1, null, r2.phaseSeq, m2.code), /동료/, '동료 이름표는 불가');
+  throws(() => G.kill(r2, m1, null, r2.phaseSeq, m1.code), /자신/, '내 이름표는 불가');
+  const res = G.kill(r2, m1, c2.id, r2.phaseSeq, 'https://x.dev/?s=' + c1.code.toLowerCase());
+  ok(res.targetName === c1.name && c1.status === 'dead' && c2.status === 'alive', '찍은 이름표의 사람이 대상 (목록에서 넘긴 id는 무시)');
+  m2.killReadyAt = 0;
+  const n = Number(c2.code.slice(1));
+  ok(G.kill(r2, m2, null, r2.phaseSeq, 'p' + n).targetName === c2.name, '손으로 친 p7 같은 코드도 인식');
+  const pv = G.playerView(r2, m1);
+  ok(pv.settings.killByScan === true && pv.mafia.targets.every(t => /^P\d\d$/.test(t.code)), '마피아 화면에 모드와 대상 이름표 번호 전달');
+  ok(G.playerView(r2, G.list(r2).find(x => x.role === 'citizen' && x.status === 'alive')).mafia === undefined, '시민은 대상 정보를 받지 않음');
+}
+{
+  const r3 = G.createRoom(new Set());
+  ['가', '나', '다', '라'].forEach(n => G.join(r3, n));
+  G.assignTags(r3); G.updateSettings(r3, { mafiaCount: 1, startProtect: 0 });
+  G.assignRoles(r3); G.startGame(r3, true);
+  const m = G.list(r3).find(x => x.role === 'mafia'), c = G.list(r3).find(x => x.role === 'citizen');
+  m.killReadyAt = 0;
+  ok(G.kill(r3, m, c.id, r3.phaseSeq).targetName === c.name, '모드가 꺼져 있으면 지금처럼 목록으로 암살');
+}
+
 console.log(`\n결과: ${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);

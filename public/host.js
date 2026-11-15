@@ -243,6 +243,7 @@ function tabSettings(v) {
     <label>회의 집결 장소</label><input name="gatherPlace" value="${esc(s.gatherPlace)}" ${locked ? 'disabled' : ''}>
     <label class="check"><input type="checkbox" name="revealEjectedRole" ${s.revealEjectedRole ? 'checked' : ''} ${locked ? 'disabled' : ''}> 추방된 사람의 역할 공개</label>
     <label class="check"><input type="checkbox" name="keepAwake" ${s.keepAwake !== false ? 'checked' : ''} ${locked ? 'disabled' : ''}> 게임 중 참가자 화면 켜 두기 (회의 알림을 놓치지 않게, 배터리 조금 더 씀)</label>
+    <label class="check"><input type="checkbox" name="killByScan" ${s.killByScan ? 'checked' : ''} ${locked ? 'disabled' : ''}> 암살은 상대 목걸이 이름표 QR을 직접 찍어야 함 (손 닿는 거리에서만 가능, 이름 목록으로는 암살 불가)</label>
     ${locked ? '' : '<button class="primary" style="margin-top:12px">설정 저장</button>'}
   </form>
   <div class="card"><h3>설정 파일</h3>
@@ -531,6 +532,7 @@ app.addEventListener('submit', async (e) => {
   settings.gatherPlace = f.get('gatherPlace');
   settings.revealEjectedRole = f.get('revealEjectedRole') === 'on';
   settings.keepAwake = f.get('keepAwake') === 'on';
+  settings.killByScan = f.get('killByScan') === 'on';
   act('settings', { settings }, '설정을 저장했습니다.');
 });
 

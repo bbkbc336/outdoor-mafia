@@ -234,6 +234,9 @@ async function handleScan(value) {
       <div class="btns" style="margin-top:16px"><button class="danger" data-act="report">시체 신고 → 회의 소집</button><button data-act="close">취소</button></div>`, {
       report: () => askPlace(value),
     });
+  } else if (r.kind === 'person' && killByScan() && S.view.mafia && S.view.me.status === 'alive' && S.view.mafia.targets.some(x => x.name === r.name)) {
+    if (!killReady()) return toast(`${r.message} 아직 암살 대기시간입니다.`, '', 3000);
+    confirmKillByQr(value, r.name);
   } else if (r.kind === 'question') toast('표지를 보고 아래에서 답을 고르세요.', '', 3000);
   else if (r.kind === 'game') openGame(r.taskId, r.game, r.data, r.readyAt);
   else toast(r.message || '확인했습니다.', '', 3000);
@@ -300,8 +303,30 @@ function killFlash() {
   setTimeout(() => f.remove(), 900);
 }
 
+const killByScan = () => !!(S.view && S.view.settings && S.view.settings.killByScan);
+const killReady = () => { const m = S.view && S.view.mafia; return !!m && m.killReadyAt <= serverNow() && !S.view.paused; };
+
+// 이름표 찍기 모드: 상대 목걸이 QR을 직접 찍어야 암살됩니다.
+function openKillScan() {
+  Scanner.open('암살할 사람의 목걸이 이름표 QR', (val) => confirmKillByQr(val));
+}
+async function confirmKillByQr(val, name) {
+  const v = S.view, m = v && v.mafia;
+  if (!m) return;
+  // 서버와 같은 규칙으로 읽음: 링크(?s=P07)·P07·손으로 친 p7 모두 같은 코드
+  let code = String(val || '').trim(); const q = code.match(/[?&]s=([A-Za-z0-9]+)/); if (q) code = q[1];
+  code = code.toUpperCase(); const n = code.match(/^P0*(\d{1,2})$/); if (n) code = 'P' + String(Number(n[1])).padStart(2, '0');
+  const t = name ? { name } : m.targets.find(x => x.code === code);
+  if (!t) return toast('암살할 수 있는 사람의 이름표가 아닙니다. (동료·탈락자·내 이름표는 안 됨)', 'bad', 3500);
+  const yes = await confirmBox(`${t.name} 님을 암살합니까?`, '실행하면 되돌릴 수 없습니다.', '암살 실행', true);
+  if (!yes) return;
+  const r = await act('kill', { qr: val });
+  if (r) { killFlash(); toast(`${r.targetName} 님을 암살했습니다. 자연스럽게 자리를 떠나세요.`, 'good', 3500); }
+}
+
 function openKill() {
   const v = S.view, m = v.mafia;
+  if (killByScan()) return openKillScan();
   if (!m.targets.length) return toast('선택할 수 있는 대상이 없습니다.', 'bad');
   openModal(`<h2>🔪 대상 선택</h2>
     <p class="muted small">손이 닿는 거리에서 상대를 직접 보고 있을 때만 실행하세요. 앱은 거리를 확인하지 않습니다.</p>
@@ -439,7 +464,9 @@ function roleBlock(v, compact) {
   return `<div class="rolecard ${shown ? 'shown ' + role : ''}" data-a="toggleRole" ${compact ? 'style="padding:14px"' : ''}>
     ${shown ? `<div class="muted small">나의 역할</div><div class="rname" ${compact ? 'style="font-size:32px"' : ''}>${ROLE_NAME[role]}</div>
       ${role === 'mafia' ? `<p>동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></p>
-        <p class="killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></p>` : ''}
+        ${killByScan()
+          ? `<p class="killhow">암살은 상대 <b>목걸이 QR을 직접 찍어서</b>: 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 이름표 찍어 암살</span></p>`
+          : `<p class="killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></p>`}` : ''}
       <p class="small muted">눌러서 숨기기</p>`
     : `<div class="emoji">🂠</div><p style="font-weight:800">눌러서 역할 보기</p><p class="small muted">주변에서 보지 않게 확인하세요</p>`}
   </div>`;
@@ -452,7 +479,7 @@ function viewBriefing(v) {
     ${roleBlock(v)}
     <div class="card">
       ${role === 'mafia'
-        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>암살: 게임이 시작되면 화면 아래 <b>🔒 비밀</b> 버튼 → <b>🔪 암살하기</b>. <b>손이 닿는 거리에서 직접 보고 있을 때만</b> 하세요. 대기시간이 있습니다.</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
+        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>${killByScan() ? '암살: 상대의 <b>목걸이 이름표 QR을 직접 찍어야</b> 합니다. 화면 아래 <b>🔒 비밀</b> → <b>🔪 이름표 찍어 암살</b>, 또는 <b>📷 QR 스캔</b>으로 찍어도 됩니다. 대기시간이 있습니다.' : '암살: 게임이 시작되면 화면 아래 <b>🔒 비밀</b> 버튼 → <b>🔪 암살하기</b>. <b>손이 닿는 거리에서 직접 보고 있을 때만</b> 하세요. 대기시간이 있습니다.'}</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
         : `<p><b>시민 할 일</b></p><ul class="small" style="padding-left:20px"><li>안내되는 장소로 가서 QR을 찍어 임무를 완료하세요.</li><li>쓰러진 사람을 발견하면 이름표 QR로 신고하세요.</li><li>회의에서 수상한 사람을 찾아 투표하세요.</li></ul>`}
     </div>
     ${v.me.ack ? '<div class="card good center">✔ 확인 완료. 진행자가 시작할 때까지 기다리세요.</div>'
@@ -497,7 +524,7 @@ function viewActive(v) {
         <p class="small" style="margin:10px 0 0">동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
         ${(() => {
           const ready = v.mafia.killReadyAt <= serverNow() && !v.paused;
-          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} ${bigRed}>${ready ? '🔪 암살하기' : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
+          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} ${bigRed}>${ready ? (killByScan() ? '🔪 이름표 찍어 암살' : '🔪 암살하기') : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
         })()}`
     : `<p class="small" style="margin:10px 0 0">명단은 회의에서 확인된 정보만 반영됩니다.</p>
         <button class="danger" data-a="bigList" ${bigRed}>📋 명단 크게 보기</button>`);
