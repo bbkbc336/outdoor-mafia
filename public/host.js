@@ -368,7 +368,7 @@ function tabLog(v) {
 
 // ───────────── 이벤트 ─────────────
 // ───────────── 초대 공유 (입장 링크 + 규칙 카드뉴스) ─────────────
-const GUIDE_N = 11;
+const GUIDE_N = 12;
 let guideFiles = null, guideLoading = null;
 function loadGuideFiles() {
   if (guideFiles || guideLoading || !navigator.canShare) return guideLoading;
@@ -385,7 +385,7 @@ function inviteText(code) {
 async function shareInvite(kind, code) {
   try {
     if (kind === 'shareCards') {
-      // 카드뉴스 이미지 11장을 그대로 보냅니다(휴대폰 공유창 → 카카오톡). 안 되는 기기면 카드뉴스 링크를 공유합니다.
+      // 카드뉴스 이미지 12장을 그대로 보냅니다(휴대폰 공유창 → 카카오톡). 안 되는 기기면 카드뉴스 링크를 공유합니다.
       if (navigator.canShare) {
         // 아이폰 사파리는 버튼을 누른 그 순간에만 공유창을 열어 줍니다. 그래서 미리 받아 둔 파일로 바로 엽니다.
         const ready = guideFiles;
