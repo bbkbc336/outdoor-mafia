@@ -267,6 +267,8 @@ function tabPlaces(v) {
       <p class="small muted">번호만 찍힌 QR입니다. 방 코드가 들어가지 않아 다음 행사에도 그대로 씁니다.</p>
       <div class="row"><a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank">장소 01~10</a><a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank">이름표 01~40 (양면)</a></div>
       <div class="row"><a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank">이름표 앞면만</a><a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank">이름표 뒷면만</a></div>
+      <a class="btn" href="${printBase}&what=bodyTags&n=40" target="_blank">몸 부착용 이름표 QR 01~40 (A4 한 장에 4번호 × 2장)</a>
+      <p class="small muted">목걸이 이름표와 같은 QR이라, 등·어깨에 붙인 QR을 찍어도 같은 사람으로 인식됩니다. 한 사람에게 같은 번호 2장(예: 등과 가슴)을 주세요.</p>
       <p class="small muted">이름표 앞면은 이름 적는 칸, 뒷면은 💀 사망 표시와 QR입니다. 양면 인쇄('긴 가장자리로 넘기기')로 뽑고, 양면 프린터가 없으면 앞면을 뽑은 종이를 뒤집어 넣고 뒷면을 뽑으세요.</p>
       <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
