@@ -131,8 +131,8 @@ const setup = {
 };
 const res = G.importSetup(fresh, setup);
 ok(res.locations === 2 && res.missions === 2, '설정·장소·임무를 한 번에 불러옴');
-ok(fresh.locations.find(l => l.name === '샤워장').code === 'L07' && fresh.locations.find(l => l.name === '주차장').code === 'L03', '장소 번호(인쇄한 QR) 그대로 유지');
-ok(fresh.missions[0].loc === fresh.locations.find(l => l.no === 7).id && fresh.missions[0].game === 'lock', '임무는 장소 번호로 다시 연결');
+ok(fresh.locations.find(l => l.name === '주차장').code === 'L01' && fresh.locations.find(l => l.name === '샤워장').code === 'L02', '파일의 번호 순서대로 01번 QR부터 다시 붙임');
+ok(fresh.missions[0].loc === fresh.locations.find(l => l.name === '샤워장').id && fresh.missions[0].game === 'lock', '임무는 파일의 장소 번호로 찾아 연결');
 ok(fresh.settings.mafiaCount === 2 && fresh.settings.gatherSec === 0 && fresh.settings.gatherPlace === '캠프 파이어', '설정 값 반영');
 ['가', '나', '다', '라', '마'].forEach(n => G.join(fresh, n));
 G.assignTags(fresh); G.assignRoles(fresh); G.startGame(fresh, true);

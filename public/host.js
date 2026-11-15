@@ -257,10 +257,6 @@ function tabSettings(v) {
 function tabPlaces(v) {
   const locked = v.phase !== 'lobby';
   if (!H.locDraft || locked) H.locDraft = JSON.parse(JSON.stringify(v.locations));
-  // 저장 전 새 장소가 받을 번호(서버와 같은 규칙: 비어 있는 가장 작은 번호)
-  const used = new Set(H.locDraft.filter(l => l.no).map(l => l.no));
-  const nextNo = new Map();
-  for (const l of H.locDraft) if (!l.no) { let n = 1; while (used.has(n)) n++; used.add(n); nextNo.set(l, n); }
   const printBase = `/print?code=${v.code}&token=${encodeURIComponent(H.token)}`;
   return `<div class="card"><h3>QR 출력</h3><div class="btns">
       <a class="btn primary" href="${printBase}&what=all" target="_blank">🖨 전체 출력 (입장·장소·이름표)</a>
@@ -271,12 +267,12 @@ function tabPlaces(v) {
       <div class="row"><a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank">장소 01~10</a><a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank">이름표 01~40 (양면)</a></div>
       <div class="row"><a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank">이름표 앞면만</a><a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank">이름표 뒷면만</a></div>
       <p class="small muted">이름표 앞면은 이름 적는 칸, 뒷면은 💀 사망 표시와 QR입니다. 양면 인쇄('긴 가장자리로 넘기기')로 뽑고, 양면 프린터가 없으면 앞면을 뽑은 종이를 뒤집어 넣고 뒷면을 뽑으세요.</p>
-      <p class="small muted">새 장소는 비어 있는 가장 작은 번호를 받고, 장소를 지워도 다른 장소 번호는 바뀌지 않습니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
+      <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
-      <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 이름" ${locked ? 'disabled' : ''} style="flex:3">
-        ${l.no ? `<span class="kbd" style="flex:0;white-space:nowrap">QR ${String(l.no).padStart(2, '0')}번</span>` : `<span class="kbd" style="flex:0;white-space:nowrap;border-color:var(--accent);color:var(--accent)">QR ${String(nextNo.get(l)).padStart(2, '0')}번</span>`}
-        ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0">삭제</button>`}</div>
+      <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 ${i + 1}" ${locked ? 'disabled' : ''} style="flex:3">
+        <span class="kbd" style="flex:0;white-space:nowrap">QR ${String(i + 1).padStart(2, '0')}번</span>
+        ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0" ${H.locDraft.length <= 1 ? 'disabled' : ''}>삭제</button>`}</div>
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>
       <label class="check"><input type="checkbox" data-f="box" ${l.box ? 'checked' : ''} ${locked ? 'disabled' : ''}> 도착 상자 비치</label>
       <label class="check"><input type="checkbox" data-f="hasSign" ${l.sign ? 'checked' : ''} ${locked ? 'disabled' : ''}> 현장 보고 표지 있음</label>
@@ -284,7 +280,8 @@ function tabPlaces(v) {
         <input data-f="opts" value="${esc(l.sign.options.join(', '))}" placeholder="선택지 (쉼표로 구분)" ${locked ? 'disabled' : ''} style="margin-top:6px">
         <input data-f="ans" value="${esc(l.sign.answer)}" placeholder="정답 (선택지 중 하나)" ${locked ? 'disabled' : ''} style="margin-top:6px">` : ''}
     </div>`).join('')}</div>
-    ${locked ? '' : `<div class="btns"><button data-loc="add">+ 장소 추가</button><button class="primary" data-loc="save">장소 저장</button></div>
+    ${locked ? '' : `<div class="btns"><button data-loc="add" ${H.locDraft.length >= 10 ? 'disabled' : ''}>+ 장소 추가 (${H.locDraft.length}/10곳)</button><button class="primary" data-loc="save">장소 저장</button></div>
+    <p class="small muted">장소는 1~10곳. 위에서부터 차례로 QR 01번, 02번…을 씁니다. 장소를 지우면 아래 장소들이 한 번호씩 앞 QR로 옮겨 가니, 저장 후 QR 번호대로 다시 붙이세요.</p>
     <p class="small muted">운반 임무는 '물품 출발지'에서 다른 장소의 '도착 상자'로 갑니다. 출발지와 상자가 모두 있어야 배정됩니다.</p>`}`;
 }
 
@@ -485,11 +482,11 @@ app.addEventListener('click', async (e) => {
   const loc = e.target.closest('[data-loc]');
   if (loc) {
     syncLocDraft();
-    if (loc.dataset.loc === 'add') { H.locDraft.push({ name: '', item: false, box: false, sign: null }); return renderKeepDraft(); }
-    if (loc.dataset.loc === 'del') { H.locDraft.splice(Number(loc.dataset.i), 1); return renderKeepDraft(); }
+    if (loc.dataset.loc === 'add') { if (H.locDraft.length < 10) H.locDraft.push({ name: '', item: false, box: false, sign: null }); return renderKeepDraft(); }
+    if (loc.dataset.loc === 'del') { if (H.locDraft.length > 1) H.locDraft.splice(Number(loc.dataset.i), 1); return renderKeepDraft(); }
     if (loc.dataset.loc === 'save') {
       const r = await act('locations', { locations: H.locDraft });
-      if (r) { H.locDraft = null; toast('장소를 저장했습니다. QR을 다시 출력하세요.', 'good'); render(); }
+      if (r) { H.locDraft = null; toast('장소를 저장했습니다. QR은 01~10번 고정이라 다시 뽑지 않아도 됩니다.', 'good'); render(); }
     }
   }
 });

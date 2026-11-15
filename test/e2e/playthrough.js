@@ -229,11 +229,13 @@ async function doTask(page, codeOf, how) {
     ok(/^[A-Z0-9]{4}$/.test(code), `방 생성 ${code}`);
     ok(hv0.settings.mafiaCount === 5 && hv0.settings.taskGoalPct === 80, '1시간용 기본값으로 생성');
     await host.locator('[data-tab="places"]').tap();
+    ok(await host.locator('.locedit').count() === 10 && await host.locator('[data-loc="add"][disabled]').count() === 1, '새 방은 장소 10곳 (QR 01~10번), 더는 추가 안 됨');
+    while (await host.locator('.locedit').count() > PLACES.length) await host.locator('[data-loc="del"]').last().tap();
     const inputs = host.locator('.locedit [data-f="name"]');
     for (let i = 0; i < PLACES.length; i++) await inputs.nth(i).fill(PLACES[i]);
     await host.locator('[data-loc="save"]').tap();
     await until(async () => (await hview(host)).locations.map(l => l.name).join() === PLACES.join(), 8000, '장소 이름 저장');
-    ok(true, '장소 이름을 바꿔 저장 (번호는 01~05 유지)');
+    ok((await hview(host)).locations.map(l => l.code).join() === 'L01,L02,L03,L04,L05', '장소를 5곳으로 줄여 저장 (QR 01~05번)');
     await host.locator('[data-tab="settings"]').tap();
     for (const [k, v] of [['mafiaCount', '3'], ['startProtect', '0'], ['killCooldown', '10'], ['emergencyCooldown', '0'], ['gatherSec', '60']]) await host.locator(`#setForm [name="${k}"]`).fill(v);
     await host.locator('#setForm button.primary').tap();

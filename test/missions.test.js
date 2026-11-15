@@ -60,11 +60,22 @@ G.saveMissions(room, []);
 G.assignRoles(room);
 ok(G.list(room).every(x => x.tasks.length === 3 && x.tasks.every(t => !t.mid)), '목록이 비면 장소 정보로 자동 배정');
 
-console.log('\n[삭제된 장소 검사]');
+console.log('\n[장소 QR 01~10번 고정, 장소 수는 1~10곳]');
 G.newGame(room);
-G.saveMissions(room, [{ type: 'visit', loc: L1.id }]);
-G.saveLocations(room, room.locations.filter(l => l.id !== L1.id));
-throws(() => G.assignRoles(room), /장소가 삭제되었습니다/, '임무의 장소가 지워지면 배정 전에 알림');
+ok(room.locations.length === 10 && room.locations.map(l => l.code).join() === 'L01,L02,L03,L04,L05,L06,L07,L08,L09,L10', '새 방은 장소 10곳, QR 01~10번');
+const L5 = room.locations[4];
+G.saveMissions(room, [{ type: 'visit', loc: L5.id }]);
+G.saveLocations(room, room.locations.slice(0, 6).filter(l => l.id !== L1.id));
+ok(room.locations.length === 5 && room.locations.map(l => l.code).join() === 'L01,L02,L03,L04,L05', '장소를 줄이면 앞번호 QR부터 차례로 씀');
+ok(room.locations.find(l => l.id === L5.id).code === 'L04', '중간 장소를 지우면 뒤 장소가 한 번호 앞 QR로');
+ok(room.missions[0].loc === L5.id, '번호가 바뀌어도 임무 연결은 유지');
+throws(() => G.saveLocations(room, Array.from({ length: 11 }, (_, i) => ({ name: '곳' + i }))), /1~10곳/, '11곳은 거부');
+throws(() => G.saveLocations(room, []), /1~10곳/, '0곳은 거부');
+G.saveLocations(room, [{ name: '' }, { name: '매점' }]);
+ok(room.locations[0].name === '장소 1' && room.locations[1].code === 'L02', '빈 이름은 기본 이름, 번호는 순서대로');
+G.saveMissions(room, []);
+G.assignRoles(room);
+ok(G.list(room).every(x => x.tasks.length >= 1 && x.tasks.every(t => room.locations.some(l => l.id === t.loc))), '줄인 장소로 임무 배정');
 
 console.log(`\n결과: ${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);
