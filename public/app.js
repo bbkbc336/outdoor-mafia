@@ -185,7 +185,7 @@ function onChange(prev, v) {
   Awake.set(v.settings && v.settings.keepAwake && !['lobby', 'ended'].includes(v.phase));
   if (!prev) {
     // 휴대폰 카메라로 QR(주소)을 열고 들어온 경우: 대기 중이면 이름표 연결, 게임 중이면 임무·신고
-    if (S.pendingScan && v.phase !== 'briefing') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan(s), 300); }
+    if (S.pendingScan && v.phase !== 'briefing') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan('?s=' + s), 300); } // 휴대폰 카메라로 찍은 QR: 주소 형태 그대로 넘김(찍기 모드 암살 인정)
     else S.pendingScan = null;
     return;
   }
@@ -308,11 +308,12 @@ const killReady = () => { const m = S.view && S.view.mafia; return !!m && m.kill
 
 // 이름표 찍기 모드: 상대 목걸이 QR을 직접 찍어야 암살됩니다.
 function openKillScan() {
-  Scanner.open('암살할 사람의 목걸이 이름표 QR', (val) => confirmKillByQr(val));
+  Scanner.open('암살할 사람의 목걸이 이름표 QR', (val) => confirmKillByQr(val), { noManual: true });
 }
 async function confirmKillByQr(val, name) {
   const v = S.view, m = v && v.mafia;
   if (!m) return;
+  if (!/[?&]s=[A-Za-z0-9]+/.test(String(val || ''))) return toast('코드 입력으로는 암살할 수 없습니다. 상대 목걸이 QR을 카메라로 직접 찍으세요.', 'bad', 3500);
   // 서버와 같은 규칙으로 읽음: 링크(?s=P07)·P07·손으로 친 p7 모두 같은 코드
   let code = String(val || '').trim(); const q = code.match(/[?&]s=([A-Za-z0-9]+)/); if (q) code = q[1];
   code = code.toUpperCase(); const n = code.match(/^P0*(\d{1,2})$/); if (n) code = 'P' + String(Number(n[1])).padStart(2, '0');
