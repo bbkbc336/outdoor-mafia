@@ -270,9 +270,9 @@ function tabPlaces(v) {
         <a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank"><b>이름표 01~40</b><small>앞뒤 나란히, 접어서</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank"><b>이름표 앞면</b><small>양면 인쇄용</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank"><b>이름표 뒷면</b><small>양면 인쇄용</small></a>
-        <a class="btn wide" href="${printBase}&what=bodyTags&n=40" target="_blank"><b>몸 부착용 이름표 QR 01~40</b><small>A4 한 장에 4번호 × 2장</small></a>
+        <a class="btn wide" href="${printBase}&what=bodyTags&n=40" target="_blank"><b>몸 부착용 이름표 QR 01~40</b><small>시트지(A4 라벨지) 한 장에 4번호 × 2장</small></a>
       </div>
-      <p class="small muted">목걸이 이름표와 같은 QR이라, 등·어깨에 붙인 QR을 찍어도 같은 사람으로 인식됩니다. 한 사람에게 같은 번호 2장(예: 등과 가슴)을 주세요.</p>
+      <p class="small muted">몸 부착용은 A4 시트지(접착 라벨지)에 인쇄해 테두리를 따라 잘라 옷에 붙이세요. 목걸이 이름표와 같은 QR이라 몸에 붙인 QR을 찍어도 같은 사람으로 인식됩니다. 한 사람에게 같은 번호 2장(예: 등과 가슴)을 주세요.</p>
       <p class="small muted">이름표는 한 줄에 같은 사람의 <b>앞면(이름 칸)과 뒷면(💀 사망 + QR)</b>이 나란히 나와 A4 한 장에 2명입니다. 한 면만 인쇄해 바깥 점선을 자르고, 가운데 노란 점선에서 반으로 접으면 됩니다(01~40번은 20장). 양면 프린터가 있으면 '이름표 앞면'과 '이름표 뒷면'을 따로 뽑아 양면으로 인쇄하세요.</p>
       <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
