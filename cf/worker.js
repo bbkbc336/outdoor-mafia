@@ -26,9 +26,9 @@ export default {
     const url = new URL(request.url);
     const route = url.pathname;
     try {
-      if (route === '/qr.svg') {
+      if (route === '/qr.svg') { // 입장 QR(진행자 화면·큰 화면): 밝은 우주 디자인(시안 A)
         const text = (url.searchParams.get('text') || '').slice(0, 200);
-        return new Response(QR.svg(text), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
+        return new Response(QR.artSvg(text), { headers: { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=3600' } });
       }
       if (route === '/api/ping') return jsonRes(200, { ok: true, t: Date.now(), ws: true, push: true });
       // 회의 알림(웹 푸시)용 공개 열쇠. 열쇠는 처음 쓸 때 Keys가 만들어 보관합니다.
