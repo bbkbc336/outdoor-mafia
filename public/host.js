@@ -268,10 +268,11 @@ function tabPlaces(v) {
       <div class="printgrid">
         <a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank"><b>장소 01~10</b><small>A4 한 장에 1곳</small></a>
         <a class="btn" href="${printBase}&what=blankPlaces&n=10&bw=1" target="_blank"><b>장소 01~10 흑백용</b><small>흰 바탕, 토너 절약</small></a>
-        <a class="btn" href="${printBase}&what=blankTags&n=40" target="_blank"><b>이름표 01~40</b><small>앞뒤 나란히, 접어서</small></a>
         <a class="btn" href="${printBase}&what=bodyTags&n=40" target="_blank"><b>몸 부착용 01~40</b><small>한 장에 2번호 × 2장, 테이프</small></a>
+        <a class="btn" href="${printBase}&what=bodyTags&n=40&bw=1" target="_blank"><b>몸 부착용 흑백용</b><small>흰 바탕, 토너 절약</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank"><b>이름표 앞면</b><small>양면 인쇄용</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank"><b>이름표 뒷면</b><small>양면 인쇄용</small></a>
+        <a class="btn wide" href="${printBase}&what=blankTags&n=40" target="_blank"><b>이름표 01~40</b><small>앞뒤 나란히, 접어서</small></a>
       </div>
       <p class="small muted">몸 부착용은 A4 일반 종이에 인쇄해 점선을 따라 자르고, QR 위아래 띠에 테이프를 붙여 옷에 고정하세요(QR 위로는 테이프를 붙이지 마세요. 반사돼 안 찍혀요). 목걸이 이름표와 같은 QR이라 몸에 붙인 QR을 찍어도 같은 사람으로 인식됩니다. 한 사람에게 같은 번호 2장(예: 등과 가슴)을 주세요.</p>
       <p class="small muted">이름표는 한 줄에 같은 사람의 <b>앞면(이름 칸)과 뒷면(💀 사망 + QR)</b>이 나란히 나와 A4 한 장에 2명입니다. 한 면만 인쇄해 바깥 점선을 자르고, 가운데 노란 점선에서 반으로 접으면 됩니다(01~40번은 20장). 양면 프린터가 있으면 '이름표 앞면'과 '이름표 뒷면'을 따로 뽑아 양면으로 인쇄하세요.</p>
