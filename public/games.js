@@ -330,7 +330,7 @@ const Games = (() => {
         bottom.appendChild(b);
       });
       const drawQueue = () => {
-        top.innerHTML = '';
+        top.replaceChildren();
         win.step(`${i}/${d.boxes.length}`);
         if (i >= d.boxes.length) return;
         const box = h('div', 'crate', '📦');

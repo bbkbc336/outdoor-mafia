@@ -53,22 +53,58 @@ function buzz(p) {
   if (!navigator.vibrate || (navigator.userActivation && !navigator.userActivation.hasBeenActive)) return;
   try { navigator.vibrate(p); } catch (_) { /* 무시 */ }
 }
+// 화면 읽기 프로그램(보이스오버·톡백)에 알림 글을 읽어 줍니다.
+// 모달이 열려 있으면 바깥은 읽히지 않으므로 모달 안의 읽기 영역을 씁니다.
+function liveRegion() {
+  const inDialog = document.querySelector('dialog[open] .sr-live');
+  if (inDialog) return inDialog;
+  let r = document.getElementById('srLive');
+  if (!r && document.body) {
+    r = document.createElement('div');
+    r.id = 'srLive'; r.className = 'sr-live visually-hidden'; r.setAttribute('aria-live', 'polite');
+    document.body.appendChild(r);
+  }
+  return r;
+}
+// 읽기 영역은 처음부터 페이지에 있어야 바뀐 글을 읽어 줍니다.
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', liveRegion); else liveRegion();
+function announce(msg, urgent = false) {
+  const target = document.querySelector('dialog[open]') || document;
+  if (typeof target.ariaNotify === 'function') {
+    try { target.ariaNotify(msg, { priority: urgent ? 'high' : 'normal' }); return; } catch (_) { /* 아래 방식으로 */ }
+  }
+  const r = liveRegion();
+  if (!r) return;
+  r.textContent = '';
+  setTimeout(() => { r.textContent = msg; }, 60);
+}
+
+// 잠깐 떴다 사라지는 알림. popover로 띄워 열린 모달 위에도 보이게 합니다.
 function toast(msg, kind = '', ms = 2600) {
   document.querySelectorAll('.toast').forEach(x => x.remove());
   const t = document.createElement('div');
   t.className = 'toast ' + kind;
   t.textContent = msg;
+  const pop = Object.hasOwn(HTMLElement.prototype, 'popover');
+  if (pop) t.setAttribute('popover', 'manual');
   document.body.appendChild(t);
+  if (pop) { try { t.showPopover(); } catch (_) { /* 무시 */ } }
+  announce(msg, kind === 'bad');
   if (kind) buzz(kind === 'bad' ? [80, 60, 80] : 60);
   setTimeout(() => t.remove(), ms);
 }
 
-// 하단 시트 모달. html 안의 [data-act] 버튼에 handlers를 연결합니다.
+// 하단 시트 모달. 브라우저 기본 <dialog>로 열어 초점이 창 안에 머물고, Esc·뒤로 가기로 닫힙니다.
+// html 안의 [data-act] 버튼에 handlers를 연결합니다. handlers.onClose는 어떤 식으로든 닫힐 때 불립니다.
 function openModal(html, handlers = {}, id = 'modal') {
   closeModal(id);
-  const m = document.createElement('div');
+  const m = document.createElement('dialog');
   m.className = 'modal'; m.id = id;
-  m.innerHTML = `<div class="sheet">${html}</div>`;
+  m.innerHTML = `<div class="sheet">${html}</div><div class="sr-live visually-hidden" aria-live="polite"></div>`;
+  const h = m.querySelector('h1, h2, h3');
+  if (h) { h.id = id + '-title'; m.setAttribute('aria-labelledby', h.id); }
+  // 입력칸에 바로 초점이 가면 휴대폰 자판이 튀어나오므로, 따로 정하지 않았으면 창 자체에 초점
+  if (!m.querySelector('[autofocus]')) m.autofocus = true;
   m.addEventListener('click', (e) => {
     if (e.target === m) return closeModal(id);
     const b = e.target.closest('[data-act]');
@@ -77,21 +113,50 @@ function openModal(html, handlers = {}, id = 'modal') {
     if (b.dataset.act === 'close') return closeModal(id);
     if (fn) fn(b, m);
   });
+  m.addEventListener('close', () => { m.remove(); if (handlers.onClose) handlers.onClose(); });
   document.body.appendChild(m);
+  if (typeof m.showModal === 'function') m.showModal(); else m.setAttribute('open', '');
   return m;
 }
-function closeModal(id = 'modal') { const m = document.getElementById(id); if (m) m.remove(); }
+function closeDialog(m) { if (!m) return; if (m.open && typeof m.close === 'function') m.close(); m.remove(); }
+function closeModal(id = 'modal') { closeDialog(document.getElementById(id)); }
 function confirmBox(title, body, okLabel = '확인', danger = false) {
   return new Promise((resolve) => {
-    openModal(`<h2>${esc(title)}</h2>${body ? `<p class="muted">${body}</p>` : ''}<div class="btns" style="margin-top:16px">
+    let m = null, done = false;
+    // 자기 창만 닫습니다(그사이 새 확인창이 같은 id로 열렸을 수 있음).
+    const fin = (v) => { if (done) return; done = true; closeDialog(m); resolve(v); };
+    m = openModal(`<h2>${esc(title)}</h2>${body ? `<p class="muted">${body}</p>` : ''}<div class="btns" style="margin-top:16px">
       <button class="${danger ? 'danger' : 'primary'}" data-act="ok">${esc(okLabel)}</button>
-      <button data-act="no">취소</button></div>`, {
-      ok: () => { closeModal('confirm'); resolve(true); },
-      no: () => { closeModal('confirm'); resolve(false); },
+      <button data-act="no" autofocus>취소</button></div>`, {
+      ok: () => fin(true),
+      no: () => fin(false),
+      onClose: () => fin(false),
     }, 'confirm');
-    const m = document.getElementById('confirm');
-    m.addEventListener('click', (e) => { if (e.target === m) resolve(false); });
   });
+}
+
+// 입력칸 이름 연결: 바로 앞 <label>을 for/id로 묶고, 이름표 없이 안내 글(placeholder)만 있는 칸에는 그 글을 이름으로 붙입니다.
+let fieldSeq = 0;
+function linkFieldLabels(root = document) {
+  root.querySelectorAll('label:not([for]):not(.check)').forEach((l) => {
+    const f = l.nextElementSibling;
+    if (!f || !/^(INPUT|SELECT|TEXTAREA)$/.test(f.tagName) || l.contains(f)) return;
+    if (!f.id) f.id = 'fld' + (++fieldSeq);
+    l.htmlFor = f.id;
+  });
+  root.querySelectorAll('input[placeholder]:not([aria-label]), textarea[placeholder]:not([aria-label])').forEach((f) => {
+    if (f.labels && f.labels.length) return;
+    f.setAttribute('aria-label', f.placeholder);
+  });
+}
+{
+  let queued = false;
+  const run = () => { queued = false; linkFieldLabels(); };
+  const start = () => {
+    linkFieldLabels();
+    new MutationObserver(() => { if (!queued) { queued = true; queueMicrotask(run); } }).observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 }
 
 // 상태 받기.

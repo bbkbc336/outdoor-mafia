@@ -125,9 +125,9 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .dock button { min-height: 64px; font-size: 20px; }
 
 /* 모달·토스트 */
-.modal { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.75); display: flex; align-items: flex-end; justify-content: center; }
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.75); }
 .modal .sheet { width: 100%; max-width: 560px; max-height: 88dvh; overflow: auto; background: var(--panel); border-radius: 22px 22px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); border-top: 2px solid var(--line); }
-.toast { position: fixed; left: 50%; top: 70px; transform: translateX(-50%); z-index: 60; max-width: 92vw; width: max-content; padding: 14px 18px; border-radius: 14px; font-weight: 800; background: var(--panel2); border: 2px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+.toast { position: fixed; color: var(--text); left: 50%; top: 70px; transform: translateX(-50%); z-index: 60; max-width: 92vw; width: max-content; padding: 14px 18px; border-radius: 14px; font-weight: 800; background: var(--panel2); border: 2px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
 .toast.good { background: var(--good); color: #052b16; border-color: var(--good); }
 .toast.bad { background: var(--bad); color: #fff; border-color: var(--bad); }
 
@@ -576,3 +576,26 @@ body {
 .printgrid .btn b { font-size: 17px; }
 .printgrid .btn small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .printgrid .btn.wide { grid-column: 1 / -1; }
+
+/* ───── 모던 웹 점검 반영 ───── */
+/* 어두운 화면에 맞게 선택 목록·체크박스·스크롤바도 어둡게 */
+:root { color-scheme: dark; }
+/* 확인창·하단 시트: 브라우저 기본 <dialog>(초점 가두기·Esc·뒤로 가기 닫기) 위에 기존 모양 그대로 */
+dialog.modal { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; color: var(--text); overscroll-behavior: contain; }
+dialog.modal[open] { display: flex; align-items: flex-end; justify-content: center; }
+dialog.modal::backdrop { background: transparent; overflow: hidden; overscroll-behavior: contain; }
+dialog.modal:focus-visible { outline: none; }
+/* 알림(popover)의 브라우저 기본 위치·여백 지우기 */
+.toast[popover] { inset: auto; left: 50%; top: 70px; margin: 0; overflow: visible; }
+/* 화면에는 안 보이고 화면 읽기 프로그램만 읽는 글 */
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important; clip-path: inset(50%) !important; overflow: hidden !important;
+  width: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; border: 0 !important; white-space: nowrap !important;
+}
+/* 역할 카드는 키보드·접근성 기능으로도 누를 수 있게 <button>. 버튼 기본 모양은 지웁니다. */
+button.rolecard { display: block; width: 100%; min-height: 0; font: inherit; font-weight: 400; color: var(--text); box-shadow: none; text-align: center; }
+button.rolecard:active { transform: none; translate: none; box-shadow: none; }
+.rolecard > span { display: block; }
+.rolecard > .rc-p { margin: 1em 0; }
+/* 글꼴(Orbitron)이 늦게 떠도 숫자 크기가 덜 흔들리게 */
+:where(.timer, .dialnow, .lcd span, .dialgoal span, .stat b, input.code, .game .gstep, .scr-big, .scr-timer, .scr-code) { font-size-adjust: from-font; }

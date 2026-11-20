@@ -257,7 +257,7 @@ function tabSettings(v) {
 
 function tabPlaces(v) {
   const locked = v.phase !== 'lobby';
-  if (!H.locDraft || locked) H.locDraft = JSON.parse(JSON.stringify(v.locations));
+  if (!H.locDraft || locked) H.locDraft = structuredClone(v.locations);
   const printBase = `/print?code=${v.code}&token=${encodeURIComponent(H.token)}`;
   return `<div class="card"><h3>QR 출력</h3><div class="btns">
       <a class="btn primary" href="${printBase}&what=all" target="_blank">🖨 전체 출력 (입장·장소·이름표)</a></div>
@@ -297,7 +297,7 @@ function tabPlaces(v) {
 const MTYPE = { game: '미니게임', visit: '방문 점검 (QR만)', report: '현장 보고 (표지 필요)', carry: '물품 운반 (물건 필요)' };
 function tabMissions(v) {
   const locked = v.phase !== 'lobby';
-  if (!H.misDraft || locked) H.misDraft = JSON.parse(JSON.stringify(v.missions));
+  if (!H.misDraft || locked) H.misDraft = structuredClone(v.missions);
   const d = H.misDraft, per = v.settings.tasksPerPlayer;
   const dis = locked ? 'disabled' : '';
   const locOpts = (sel) => `<option value="">장소 선택</option>` + v.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.name)}</option>`).join('');

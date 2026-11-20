@@ -462,15 +462,15 @@ function roleBlock(v, compact) {
   const role = v.me.role;
   const shown = S.roleShown;
   const mates = v.mafia ? v.mafia.mates : [];
-  return `<div class="rolecard ${shown ? 'shown ' + role : ''}" data-a="toggleRole" ${compact ? 'style="padding:14px"' : ''}>
-    ${shown ? `<div class="muted small">나의 역할</div><div class="rname" ${compact ? 'style="font-size:32px"' : ''}>${ROLE_NAME[role]}</div>
-      ${role === 'mafia' ? `<p>동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></p>
+  return `<button type="button" aria-expanded="${shown ? 'true' : 'false'}" class="rolecard ${shown ? 'shown ' + role : ''}" data-a="toggleRole" ${compact ? 'style="padding:14px"' : ''}>
+    ${shown ? `<span class="muted small">나의 역할</span><span class="rname" ${compact ? 'style="font-size:32px"' : ''}>${ROLE_NAME[role]}</span>
+      ${role === 'mafia' ? `<span class="rc-p">동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></span>
         ${killByScan()
-          ? `<p class="killhow">암살은 상대 <b>목걸이 QR을 직접 찍어서</b>: 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 이름표 찍어 암살</span></p>`
-          : `<p class="killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></p>`}` : ''}
-      <p class="small muted">눌러서 숨기기</p>`
-    : `<div class="emoji">🂠</div><p style="font-weight:800">눌러서 역할 보기</p><p class="small muted">주변에서 보지 않게 확인하세요</p>`}
-  </div>`;
+          ? `<span class="rc-p killhow">암살은 상대 <b>목걸이 QR을 직접 찍어서</b>: 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 이름표 찍어 암살</span></span>`
+          : `<span class="rc-p killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></span>`}` : ''}
+      <span class="rc-p small muted">눌러서 숨기기</span>`
+    : `<span class="emoji">🂠</span><span class="rc-p" style="font-weight:800">눌러서 역할 보기</span><span class="rc-p small muted">주변에서 보지 않게 확인하세요</span>`}
+  </button>`;
 }
 
 function viewBriefing(v) {
