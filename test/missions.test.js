@@ -173,6 +173,22 @@ console.log('\n[장소 QR 번호 직접 고르기]');
   ok(G.scan(r7, G.join(r7, '하'), 'L07').message.includes('매점'), 'QR 07을 찍으면 매점으로 인식');
 }
 
+console.log('\n[무작위 게임은 사람마다 다르고 한 사람 안에서 겹치지 않음]');
+{
+  const r8 = G.createRoom(new Set());
+  G.saveMissions(r8, r8.locations.map(l => ({ type: 'game', loc: l.id, game: 'random' })));
+  ['가', '나', '다', '라', '마', '바', '사', '아'].forEach(n => G.join(r8, n));
+  G.assignTags(r8); G.updateSettings(r8, { mafiaCount: 2, tasksPerPlayer: 6 });
+  G.assignRoles(r8);
+  const ps = G.list(r8);
+  ok(ps.every(p => new Set(p.tasks.map(t => t.game)).size === p.tasks.length), '한 사람의 무작위 게임 6개가 모두 다름');
+  const atLoc = new Map();
+  for (const p of ps) for (const t of p.tasks) { if (!atLoc.has(t.loc)) atLoc.set(t.loc, new Set()); atLoc.get(t.loc).add(t.game); }
+  ok([...atLoc.values()].some(set => set.size > 1), '같은 장소라도 사람마다 다른 게임');
+  const seqs = new Set(ps.map(p => p.tasks.map(t => t.loc).join()));
+  ok(seqs.size > 1, '임무 순서도 사람마다 다름');
+}
+
 console.log('\n[장소 사진]');
 {
   const r4 = G.createRoom(new Set());

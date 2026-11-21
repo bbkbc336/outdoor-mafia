@@ -395,9 +395,9 @@ function syncMisDraft() {
 }
 function defaultMissions(v) {
   const out = [];
-  // 장소마다 미니게임 하나씩, 10종을 돌아가며 배치
-  const kinds = Object.keys(GAME_NAME);
-  v.locations.forEach((l, i) => out.push({ type: 'game', loc: l.id, game: kinds[i % kinds.length], title: '', desc: '' }));
+  // 장소마다 미니게임 임무 하나씩. 게임 종류는 '무작위'라 사람마다·판마다 다른 게임이 나옵니다
+  // (예전에는 장소마다 게임을 고정해 같은 장소에서는 늘 같은 게임이 나왔음).
+  v.locations.forEach((l) => out.push({ type: 'game', loc: l.id, game: 'random', title: '', desc: '' }));
   return out;
 }
 function renderKeepMis() { const d = H.misDraft; render(); H.misDraft = d; }
@@ -531,7 +531,7 @@ app.addEventListener('click', async (e) => {
     if (a === 'add') { H.misDraft.push({ type: 'game', game: 'random', loc: '', title: '', desc: '' }); return renderKeepMis(); }
     if (a === 'del') { H.misDraft.splice(Number(mis.dataset.i), 1); return renderKeepMis(); }
     if (a === 'fill') {
-      if (H.misDraft.length && !(await confirmBox('기본 임무로 채울까요?', '지금 목록 뒤에 장소마다 미니게임이 하나씩 추가됩니다.', '채우기'))) return;
+      if (H.misDraft.length && !(await confirmBox('기본 임무로 채울까요?', '지금 목록 뒤에 장소마다 미니게임(무작위) 임무가 하나씩 추가됩니다.', '채우기'))) return;
       H.misDraft = H.misDraft.concat(defaultMissions(H.view)); return renderKeepMis();
     }
     if (a === 'clear') {
