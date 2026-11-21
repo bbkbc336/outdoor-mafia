@@ -189,6 +189,34 @@ console.log('\n[무작위 게임은 사람마다 다르고 한 사람 안에서 
   ok(seqs.size > 1, '임무 순서도 사람마다 다름');
 }
 
+console.log('\n[집결 도착 확인 · 결과 후 자동 재개]');
+{
+  const r9 = G.createRoom(new Set());
+  ['가', '나', '다', '라'].forEach(n => G.join(r9, n));
+  G.assignTags(r9); G.updateSettings(r9, { mafiaCount: 1, startProtect: 0, gatherSec: 180 });
+  G.assignRoles(r9); G.startGame(r9, true);
+  const ps = G.list(r9);
+  G.hostMeeting(r9);
+  ok(r9.phase === 'gathering' && G.hostView(r9, () => true).meeting.arrive.total === 4, '집결 중 도착 0/4');
+  for (const p of ps.slice(0, 3)) G.arrive(r9, p, r9.phaseSeq);
+  ok(r9.phase === 'gathering' && G.playerView(r9, ps[0]).meeting.arrive.mine === true && G.playerView(r9, ps[3]).meeting.arrive.mine === false, '3명 도착: 아직 집결, 내 도착 표시');
+  ok(G.hostView(r9, () => true).meeting.arrive.waiting.join() === ps[3].name, '진행자에게 아직 안 온 사람 표시');
+  ok(G.arrive(r9, ps[3], r9.phaseSeq).kind === 'discussion' && r9.phase === 'discussion', '모두 도착하면 바로 토론 시작');
+  G.startVoting(r9);
+  for (const p of ps) G.castVote(r9, p, 'skip', r9.phaseSeq);
+  ok(r9.phase === 'result' && r9.phaseEndsAt - Date.now() > 55000, '결과 단계에 60초 자동 재개 시각');
+  r9.phaseEndsAt = Date.now() - 1;
+  ok(G.tick(r9) && r9.phase === 'active', '60초가 지나면 진행자 없이 활동 재개');
+  const r10 = G.createRoom(new Set());
+  ['가', '나', '다', '라'].forEach(n => G.join(r10, n));
+  G.assignTags(r10); G.updateSettings(r10, { mafiaCount: 1, startProtect: 0, resultSec: 0 });
+  G.assignRoles(r10); G.startGame(r10, true); G.hostMeeting(r10); G.startVoting(r10);
+  for (const p of G.list(r10)) G.castVote(r10, p, 'skip', r10.phaseSeq);
+  ok(r10.phase === 'result' && r10.phaseEndsAt === null, '자동 재개 0초면 진행자가 직접 재개');
+  delete r10.settings.resultSec;
+  ok(G.hostView(r10, () => true).settings.resultSec === 60, '예전 방도 설정 화면에 기본값 60초');
+}
+
 console.log('\n[장소 사진]');
 {
   const r4 = G.createRoom(new Set());

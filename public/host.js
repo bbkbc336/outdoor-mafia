@@ -172,6 +172,7 @@ function tabRun(v) {
       <div class="btns">${v.phase === 'gathering'
         ? '<button class="primary" data-run="discussion">모두 모였음 → 토론 시작</button><button data-run="vote">토론 없이 바로 투표</button>'
         : '<button class="primary" data-run="vote">지금 투표 시작</button><button data-run="extend">토론 1분 연장</button>'}</div>
+      ${v.phase === 'gathering' && m.arrive ? `<p class="small muted">도착 확인 <b>${m.arrive.count}/${m.arrive.total}명</b>${m.arrive.waiting.length ? ` · 아직: ${m.arrive.waiting.map(esc).join(', ')}` : ''} (모두 도착하면 자동으로 토론 시작)</p>` : ''}
       ${v.phase === 'discussion' && m.discuss ? `<p class="small muted">참가자 진행 투표: 투표로 넘어가기 <b>${m.discuss.vote}/${m.discuss.needVote}</b>(전원) · 1분 추가 <b>${m.discuss.extend}/${m.discuss.needExtend}</b>(70%) · 시간 추가 ${m.discuss.extends}/${m.discuss.maxExtend}번 씀</p>` : ''}`;
   } else if (v.phase === 'voting') {
     const vt = v.vote || { cast: 0, eligible: 0, ballots: [] };
@@ -184,8 +185,9 @@ function tabRun(v) {
     const r = v.lastResult || {};
     main = `<div class="card hl"><div class="phase">투표 결과</div><p class="big" style="font-size:24px">${esc(r.why)}</p>
         <ul class="list">${(r.tally || []).map(t => `<li><span class="name">${esc(t.name)}</span><b>${t.count}표</b></li>`).join('')}
-        <li><span class="name">건너뛰기</span><b>${r.skip}</b></li><li><span class="name muted">미투표</span>${r.noVote}</li></ul></div>
-      <button class="primary" data-run="resume">▶ 활동 재개</button>`;
+        <li><span class="name">건너뛰기</span><b>${r.skip}</b></li><li><span class="name muted">미투표</span>${r.noVote}</li></ul>
+        ${v.phaseEndsAt ? `<p class="small muted" style="margin-bottom:0">자동 재개까지</p><div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}</div>
+      <button class="primary" data-run="resume">▶ ${v.phaseEndsAt ? '지금 바로 ' : ''}활동 재개</button>`;
   } else if (v.phase === 'ended') {
     const e = v.end || {};
     main = `<div class="card hl center"><div class="phase">게임 종료</div>
@@ -235,6 +237,7 @@ const SETTING_FIELDS = [
   ['killCooldown', '암살 대기시간', '초'], ['startProtect', '시작 직후 암살 보호', '초'], ['resumeProtect', '회의 후 암살 보호', '초'],
   ['emergencyTotal', '긴급회의 횟수 (모두 합쳐서)', '회'], ['emergencyCooldown', '긴급회의 대기 (시작·재개 후)', '초'],
   ['gatherSec', '회의 집결 제한 (0=직접 시작)', '초'], ['discussionSec', '토론 시간', '초'], ['voteSec', '투표 시간', '초'],
+  ['resultSec', '투표 결과 후 자동 재개 (0=직접 재개)', '초'],
 ];
 function tabSettings(v) {
   const s = v.settings, locked = v.phase !== 'lobby';
@@ -335,7 +338,7 @@ function tabPlaces(v) {
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 ${i + 1}" ${locked ? 'disabled' : ''} style="flex:3">
-        <select data-f="no" aria-label="${esc(l.name || '장소 ' + (i + 1))}에 쓸 장소 QR 번호" ${locked ? 'disabled' : ''} style="flex:0 0 auto;width:auto">${locNoOptions(l.no, i)}</select>
+        <select data-f="no" aria-label="${esc(l.name || '장소 ' + (i + 1))}에 쓸 장소 QR 번호" ${locked ? 'disabled' : ''} class="locno">${locNoOptions(l.no, i)}</select>
         ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0" ${H.locDraft.length <= 1 ? 'disabled' : ''}>삭제</button>`}</div>
       ${locPhotoRow(v, l)}
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>

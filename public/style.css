@@ -624,3 +624,7 @@ button.rolecard:active { transform: none; translate: none; box-shadow: none; }
 /* 토론 중 회의 진행 투표 */
 .dvcard .dvbtn { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 76px; padding: 10px 8px; font-size: 18px; }
 .dvcard .dvcount { font-family: var(--digits, sans-serif); font-size: 15px; opacity: .85; }
+/* 장소 QR 번호 선택: 가장 긴 선택지('사용 중: …') 길이로 늘어나 삭제 버튼을 가리지 않게 폭 고정 */
+select.locno { flex: 0 0 6.6em; width: 6.6em; min-width: 0; padding-left: 8px; padding-right: 4px; font-size: 16px; }
+.locedit .row { min-width: 0; }
+.locedit .row > input { min-width: 0; }

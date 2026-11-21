@@ -84,6 +84,7 @@ function viewOf(v) {
         <p class="scr-sub">${why}</p>
         ${v.phase === 'gathering' ? `<p class="scr-place">집결 장소 <b>${esc(m.place)}</b></p>` : ''}
         ${timer(v)}
+        ${v.phase === 'gathering' && m.arrive ? `<p class="scr-sub">📍 도착 <b>${m.arrive.count} / ${m.arrive.total}명</b> · 모두 도착하면 바로 토론</p>` : ''}
         ${v.phase === 'discussion' && m.discuss ? `<p class="scr-sub">🗳️ 투표로 넘어가기 <b>${m.discuss.vote}/${m.discuss.needVote}</b> · ⏱ 1분 추가 <b>${m.discuss.extend}/${m.discuss.needExtend}</b></p>` : ''}
         <div class="scr-out">이번 회의에서 확인된 탈락자: <b>${(m.revealed || []).map(esc).join(', ') || '없음'}</b></div></div>`;
     }
@@ -95,7 +96,8 @@ function viewOf(v) {
       const r = v.lastResult || {};
       return `<div class="scr-center"><div class="scr-title">${r.ejected ? `${esc(r.ejected)} 님 추방` : '추방 없음'}</div>
         <p class="scr-sub">${esc(r.why || '')}${r.ejected && r.ejectedRole ? ` · ${esc(ROLE_NAME[r.ejectedRole] || '')}였습니다` : ''}</p>
-        <ul class="scr-tally">${(r.tally || []).map(t => `<li><span>${esc(t.name)}</span><b>${t.count}표</b></li>`).join('')}<li><span>건너뛰기</span><b>${r.skip || 0}표</b></li></ul></div>`;
+        <ul class="scr-tally">${(r.tally || []).map(t => `<li><span>${esc(t.name)}</span><b>${t.count}표</b></li>`).join('')}<li><span>건너뛰기</span><b>${r.skip || 0}표</b></li></ul>
+        ${v.phaseEndsAt ? `<p class="scr-sub">활동 재개까지</p>${timer(v)}` : ''}</div>`;
     }
     case 'ended': {
       const e = v.end || {};

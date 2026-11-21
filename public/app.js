@@ -608,14 +608,25 @@ function viewMeeting(v) {
       <p style="font-size:22px;margin-top:10px">집결 장소: <b style="color:var(--accent)">${esc(m.place)}</b></p>
       ${v.phaseEndsAt ? `<p class="small" style="margin-top:10px">토론 시작까지</p><div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}
     </div>
+    ${arriveCard(v)}
     ${meetingHead(v)}${ghostNote}
-    <p class="center muted">${v.phaseEndsAt ? '시간이 되면 토론이 시작됩니다. 서둘러 모이세요!' : '모두 모이면 진행자가 토론을 시작합니다.'}</p>
+    <p class="center muted">${v.phaseEndsAt ? '시간이 되거나 모두 도착하면 토론이 시작됩니다. 서둘러 모이세요!' : '모두 도착하면(또는 진행자가 시작하면) 토론이 시작됩니다.'}</p>
     ${rosterCard(v)}`;
   }
   return `<div class="phase center">토론</div>
     <div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>
     ${v.me.status === 'alive' ? discussCard(m.discuss) : ''}
     ${meetingHead(v)}${ghostNote}${rosterCard(v)}`;
+}
+
+// 집결 장소 도착 확인: 살아 있는 사람이 모두 누르면 바로 토론
+function arriveCard(v) {
+  const a = (v.meeting || {}).arrive;
+  if (!a || v.me.status !== 'alive') return a ? `<p class="center small muted">도착 ${a.count} / ${a.total}명</p>` : '';
+  return `<div class="card center arrivecard">
+    ${a.mine ? `<div class="emoji" style="font-size:40px">✅</div><b>도착 확인 완료</b>`
+      : `<button class="primary" data-a="arrive" data-needs-online>📍 집결 장소에 도착했어요</button>`}
+    <p class="small muted" style="margin:8px 0 0">도착 <b>${a.count} / ${a.total}명</b> · 모두 도착하면 바로 토론이 시작돼요</p></div>`;
 }
 
 // 토론 중 회의 진행 투표: 투표로 넘어가기는 살아 있는 사람 전원, 1분 추가는 70%가 누르면 바로 진행됩니다.
@@ -658,7 +669,9 @@ function viewResult(v) {
       <li><span class="name">⏭ 건너뛰기</span><b>${r.skip || 0}표</b></li>
       <li><span class="name muted">미투표</span><span class="muted">${r.noVote || 0}명</span></li>
     </ul></div>
-    <p class="center muted">진행자가 활동을 재개하면 다시 흩어집니다.</p>`;
+    ${v.phaseEndsAt ? `<p class="center" style="margin-bottom:0">활동 재개까지</p><div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>
+      <p class="center muted">시간이 되면 자동으로 활동이 다시 시작됩니다. 흩어질 준비를 하세요.</p>`
+      : '<p class="center muted">진행자가 활동을 재개하면 다시 흩어집니다.</p>'}`;
 }
 
 function viewEnded(v) {
@@ -696,6 +709,7 @@ app.addEventListener('click', (e) => {
   if (a === 'bigList') return openModal(`<h2>생존자와 회의 기록</h2>${secretInfo(S.view, true)}<button data-act="close" style="margin-top:16px">닫기</button>`);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
+  if (a === 'arrive') return act('arrive').then(r => { if (r && r.kind === 'discussion') toast(r.message, 'good', 2500); });
   if (a === 'discuss') return act('discuss', { choice: b.dataset.c }).then(r => { if (r && r.message && r.kind !== 'picked') toast(r.message, r.kind === 'cancel' ? '' : 'good', 2500); });
   if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge, t.readyAt); }
   if (a === 'answer') return act('answer', { taskId: b.dataset.task, option: b.dataset.opt }).then(r => { if (r && r.message) toast('✅ ' + r.message, 'good', 3000); });
