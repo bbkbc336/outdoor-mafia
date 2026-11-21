@@ -256,6 +256,14 @@ function tabSettings(v) {
   <div class="card small muted">기본값은 약 40명·1시간(20~25분짜리 두 판) 기준입니다: 마피아 5명, 1인당 임무 3개, 목표 80%, 암살 대기 60초, 토론 120초, 집결 180초. 현장 시험 후 조정하세요.</div>`;
 }
 
+// 장소 QR 번호(01~10) 고르기. 다른 장소가 쓰는 번호에는 '(사용 중: 장소 이름)'을 붙여 보여 줍니다.
+function locNoOptions(no, i) {
+  const usedBy = new Map();
+  H.locDraft.forEach((x, j) => { if (j !== i && x.no) usedBy.set(Number(x.no), x.name || `장소 ${j + 1}`); });
+  return Array.from({ length: 10 }, (_, k) => k + 1).map(n => `<option value="${n}" ${Number(no) === n ? 'selected' : ''}>QR ${String(n).padStart(2, '0')}번${usedBy.has(n) ? ` (사용 중: ${esc(usedBy.get(n))})` : ''}</option>`).join('');
+}
+const nextFreeNo = () => { const used = new Set(H.locDraft.map(x => Number(x.no))); for (let n = 1; n <= 10; n++) if (!used.has(n)) return n; return null; };
+
 // 장소 사진: 저장된 장소만(장소 id가 있어야 함). 사진은 참가자 임무 카드에 나와 장소를 찾기 쉽게 합니다.
 function locPhotoRow(v, l) {
   const saved = l.id && v.locations.find(x => x.id === l.id);
@@ -327,7 +335,7 @@ function tabPlaces(v) {
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 ${i + 1}" ${locked ? 'disabled' : ''} style="flex:3">
-        <span class="kbd" style="flex:0;white-space:nowrap">QR ${String(i + 1).padStart(2, '0')}번</span>
+        <select data-f="no" aria-label="${esc(l.name || '장소 ' + (i + 1))}에 쓸 장소 QR 번호" ${locked ? 'disabled' : ''} style="flex:0 0 auto;width:auto">${locNoOptions(l.no, i)}</select>
         ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0" ${H.locDraft.length <= 1 ? 'disabled' : ''}>삭제</button>`}</div>
       ${locPhotoRow(v, l)}
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>
@@ -338,7 +346,7 @@ function tabPlaces(v) {
         <input data-f="ans" value="${esc(l.sign.answer)}" placeholder="정답 (선택지 중 하나)" ${locked ? 'disabled' : ''} style="margin-top:6px">` : ''}
     </div>`).join('')}</div>
     ${locked ? '' : `<div class="btns"><button data-loc="add" ${H.locDraft.length >= 10 ? 'disabled' : ''}>+ 장소 추가 (${H.locDraft.length}/10곳)</button><button class="primary" data-loc="save">장소 저장</button></div>
-    <p class="small muted">장소는 1~10곳. 위에서부터 차례로 QR 01번, 02번…을 씁니다. 장소를 지우면 아래 장소들이 한 번호씩 앞 QR로 옮겨 가니, 저장 후 QR 번호대로 다시 붙이세요.</p>
+    <p class="small muted">장소는 1~10곳. 장소마다 붙일 장소 QR 번호(01~10)를 골라 주세요. 번호는 장소끼리 겹치면 안 되고, 저장하면 QR 번호 순서로 정리됩니다. 장소를 지워도 다른 장소의 번호는 그대로입니다.</p>
     <p class="small muted">운반 임무는 '물품 출발지'에서 다른 장소의 '도착 상자'로 갑니다. 출발지와 상자가 모두 있어야 배정됩니다.</p>`}`;
 }
 
@@ -399,6 +407,7 @@ function syncLocDraft() {
     const l = H.locDraft[Number(el.dataset.i)];
     const g = (f) => el.querySelector(`[data-f="${f}"]`);
     l.name = g('name').value;
+    if (g('no')) l.no = Number(g('no').value);
     l.item = g('item').checked; l.box = g('box').checked;
     if (g('hasSign').checked) {
       l.sign = l.sign || { question: '', options: [], answer: '' };
@@ -545,7 +554,7 @@ app.addEventListener('click', async (e) => {
   const loc = e.target.closest('[data-loc]');
   if (loc) {
     syncLocDraft();
-    if (loc.dataset.loc === 'add') { if (H.locDraft.length < 10) H.locDraft.push({ name: '', item: false, box: false, sign: null }); return renderKeepDraft(); }
+    if (loc.dataset.loc === 'add') { if (H.locDraft.length < 10) H.locDraft.push({ name: '', no: nextFreeNo(), item: false, box: false, sign: null }); return renderKeepDraft(); }
     if (loc.dataset.loc === 'del') { if (H.locDraft.length > 1) H.locDraft.splice(Number(loc.dataset.i), 1); return renderKeepDraft(); }
     if (loc.dataset.loc === 'save') {
       const r = await act('locations', { locations: H.locDraft });
@@ -570,6 +579,13 @@ function exportSetup(v) {
   toast('설정 파일을 저장했습니다.', 'good');
 }
 app.addEventListener('change', async (e) => {
+  // 장소 QR 번호를 바꾸면 다른 장소의 '(사용 중)' 표시를 바로 고칩니다.
+  if (e.target.matches && e.target.matches('select[data-f="no"]') && H.locDraft) {
+    syncLocDraft(); renderKeepDraft();
+    const again = document.querySelector(`.locedit[data-i="${e.target.closest('.locedit').dataset.i}"] select[data-f="no"]`);
+    if (again) again.focus();
+    return;
+  }
   if (e.target.id === 'setupFile') {
     const file = e.target.files[0]; e.target.value = '';
     if (!file) return;

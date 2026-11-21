@@ -66,9 +66,9 @@ ok(room.locations.length === 10 && room.locations.map(l => l.code).join() === 'L
 const L5 = room.locations[4];
 G.saveMissions(room, [{ type: 'visit', loc: L5.id }]);
 G.saveLocations(room, room.locations.slice(0, 6).filter(l => l.id !== L1.id));
-ok(room.locations.length === 5 && room.locations.map(l => l.code).join() === 'L01,L02,L03,L04,L05', '장소를 줄이면 앞번호 QR부터 차례로 씀');
-ok(room.locations.find(l => l.id === L5.id).code === 'L04', '중간 장소를 지우면 뒤 장소가 한 번호 앞 QR로');
-ok(room.missions[0].loc === L5.id, '번호가 바뀌어도 임무 연결은 유지');
+ok(room.locations.length === 5 && room.locations.map(l => l.code).join() === 'L02,L03,L04,L05,L06', '장소를 줄여도 남은 장소는 쓰던 QR 번호 그대로');
+ok(room.locations.find(l => l.id === L5.id).code === 'L05', '중간 장소를 지워도 다른 장소 번호는 그대로');
+ok(room.missions[0].loc === L5.id, '장소를 지워도 임무 연결은 유지');
 throws(() => G.saveLocations(room, Array.from({ length: 11 }, (_, i) => ({ name: '곳' + i }))), /1~10곳/, '11곳은 거부');
 throws(() => G.saveLocations(room, []), /1~10곳/, '0곳은 거부');
 G.saveLocations(room, [{ name: '' }, { name: '매점' }]);
@@ -156,6 +156,21 @@ console.log('\n[토론 중 회의 진행 투표]');
   const vv = G.discussVote(r6, ps[4], 'vote', seq());
   ok(vv.kind === 'voting' && r6.phase === 'voting', '전원이 투표로 넘어가기 → 바로 투표 시작');
   throws(() => G.discussVote(r6, ps[4], 'vote', r6.phaseSeq), /토론|단계/, '투표 단계에서는 진행 투표 불가');
+}
+
+console.log('\n[장소 QR 번호 직접 고르기]');
+{
+  const r7 = G.createRoom(new Set());
+  G.saveLocations(r7, [{ name: '매점', no: 7 }, { name: '정문', no: 2 }, { name: '분수대' }]);
+  const by = (n) => r7.locations.find(l => l.name === n);
+  ok(by('매점').no === 7 && by('매점').code === 'L07' && by('정문').code === 'L02', '고른 번호의 QR을 씀 (매점 L07, 정문 L02)');
+  ok(by('분수대').no === 1, '번호를 안 고른 장소는 남은 번호 중 가장 작은 것 (01)');
+  ok(r7.locations.map(l => l.no).join(',') === '1,2,7', 'QR 번호 순서로 정리');
+  throws(() => G.saveLocations(r7, [{ name: '가', no: 3 }, { name: '나', no: 3 }]), /두 장소/, '같은 번호 두 번은 거부');
+  const keep = by('매점').id;
+  G.saveLocations(r7, r7.locations.filter(l => l.name !== '정문').map(l => ({ id: l.id, no: l.no, name: l.name })));
+  ok(r7.locations.find(l => l.id === keep).code === 'L07', '다른 장소를 지워도 번호 그대로');
+  ok(G.scan(r7, G.join(r7, '하'), 'L07').message.includes('매점'), 'QR 07을 찍으면 매점으로 인식');
 }
 
 console.log('\n[장소 사진]');
