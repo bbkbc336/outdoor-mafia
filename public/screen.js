@@ -8,7 +8,7 @@ if (qs.get('code') && qs.get('key')) {
   store.set('mafia:host:' + qs.get('code').toUpperCase(), qs.get('key'));
   history.replaceState(null, '', '/screen?room=' + qs.get('code').toUpperCase());
 }
-const SC = { code: (qs.get('room') || qs.get('code') || store.get('mafia:hostlast') || '').toUpperCase(), view: null, voice: true };
+const SC = { code: (qs.get('room') || qs.get('code') || store.get('mafia:hostlast') || '').toUpperCase(), view: null, voice: store.get('mafia:screenVoice') !== false };
 SC.token = store.get('mafia:host:' + SC.code);
 const root = document.getElementById('app');
 const pad = (n) => String(n).padStart(2, '0');
@@ -29,12 +29,12 @@ function announce(prev, v) {
   if (prev && prev.paused !== v.paused) return say(v.paused ? '일시 정지되었습니다.' : '다시 시작합니다.');
   const m = v.meeting || {};
   if (v.phase === 'gathering') {
-    Sound.siren();
+    if (SC.voice) Sound.siren();
     const why = m.trigger === 'report' ? `${m.by} 님이 쓰러진 ${m.body} 님을 발견했습니다.` : m.trigger === 'emergency' ? `${m.by} 님이 긴급회의를 요청했습니다.` : '';
     setTimeout(() => say(`회의가 소집되었습니다. ${why} 모두 ${m.place}로 모여 주세요.`), 2400);
     return;
   }
-  Sound.chime();
+  if (SC.voice) Sound.chime();
   if (v.phase === 'briefing') say('역할이 배정되었습니다. 각자 몰래 역할을 확인하세요.');
   else if (v.phase === 'active') say(prev && prev.phase === 'result' ? '활동을 다시 시작합니다. 흩어지세요.' : '게임을 시작합니다.');
   else if (v.phase === 'discussion') say('토론을 시작합니다.');
@@ -116,15 +116,29 @@ function alivePanel(v) {
     ${out.length ? `<div class="sa-head out">탈락 <b>${out.length}</b>명</div><ul class="out">${out.map(p => `<li>${esc(p.name)}<small>${p.status === 'ejected' ? '추방' : '사망'}</small></li>`).join('')}</ul>` : ''}</aside>`;
 }
 
+// 소리·음성 안내 버튼: '활동' 옆 작은 아이콘으로 접혀 있다가, 마우스를 올리거나 키보드로 고르면 글자가 펼쳐집니다.
+const soundOn = () => SC.voice && (SC.unlocked || Sound.ready()); // 진행자가 한 번 눌러 켰으면 켜진 것으로 표시
+function soundBtn() {
+  const on = soundOn();
+  const label = on ? '소리·음성 안내 끄기' : '소리·음성 안내 켜기';
+  return `<button class="scr-sound ${on ? 'on' : ''}" id="snd" aria-label="${label}" aria-pressed="${on}"><span aria-hidden="true">${on ? '🔊' : '🔇'}</span><span class="scr-sound-text" aria-hidden="true">${label}</span></button>`;
+}
+
 function render() {
   const v = SC.view;
   if (!v) return;
   const side = !['lobby', 'ended'].includes(v.phase);
   root.innerHTML = `<main class="scr">
-    <header class="scr-head"><span>🕵️ 야외 마피아</span>${!Sound.ready() ? '<button class="scr-sound" id="snd">🔊 눌러서 소리·음성 안내 켜기</button>' : ''}<span class="scr-phase">${esc(PHASE_NAME[v.phase] || '')}${v.paused ? ' · ⏸ 일시 정지' : ''}</span></header>
+    <header class="scr-head"><span>🕵️ 야외 마피아</span><span class="scr-right"><span class="scr-phase">${esc(PHASE_NAME[v.phase] || '')}${v.paused ? ' · ⏸ 일시 정지' : ''}</span>${soundBtn()}</span></header>
     ${side ? `<div class="scr-body"><section class="scr-mainview">${viewOf(v)}</section>${alivePanel(v)}</div>` : viewOf(v)}</main>`;
   const b = document.getElementById('snd');
-  if (b) b.onclick = () => { Sound.unlock(); say('소리 안내를 켰습니다.'); setTimeout(render, 300); };
+  if (b) b.onclick = () => {
+    // 누를 때 보이던 상태로 판단(누르는 순간 소리 장치가 먼저 깨어나 '켜짐'으로 바뀌므로)
+    if (b.getAttribute('aria-pressed') !== 'true') { SC.voice = true; SC.unlocked = true; Sound.unlock(); say('소리 안내를 켰습니다.'); }
+    else { SC.voice = false; try { speechSynthesis.cancel(); } catch (_) { /* 음성 미지원 */ } }
+    store.set('mafia:screenVoice', SC.voice);
+    setTimeout(render, 300);
+  };
 }
 
 if (!SC.code || !SC.token) {

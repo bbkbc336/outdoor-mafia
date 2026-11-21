@@ -389,7 +389,15 @@ html:has(body.screen) { --bg: #0c1c52; }
 .scr-names li.ready { background: #3ddc84; color: #052b16; border-color: #3ddc84; font-weight: 900; }
 .scr-tally li, .scr-roles li { font-size: 2.4vw; padding: 1vw 2vw; border-radius: 1.2vw; background: #171a22; display: flex; gap: 1.5vw; }
 .scr-roles li.mafia { background: #5a0a1a; } .scr-roles li.mafia b { color: #ff8a95; } .scr-roles li.citizen b { color: #8fdcff; }
-.scr-sound { width: auto; min-height: 0; font-family: inherit; font-size: 1.6vw; padding: 1.2vw 2.4vw; background: #ffd23f; color: #1a1400; border: 0; border-radius: 99vw; font-weight: 900; }
+/* 소리 버튼: '활동' 옆 작은 아이콘. 꺼져 있으면 노랑 테두리로 눈에 띄게, 마우스·키보드로 고르면 글자가 펼쳐짐 */
+.scr-right { display: flex; align-items: center; gap: 1.2vw; }
+button.scr-sound { display: inline-flex; align-items: center; gap: 0; width: auto; min-height: 0; margin: 0; padding: .6vw 1vw;
+  font-family: 'Noto Sans KR', system-ui, sans-serif; font-size: 1.5vw; font-weight: 800; line-height: 1.2;
+  color: #fff; background: rgba(12, 28, 82, .85); border: .2vw solid #ffd23f; border-radius: 99vw; box-shadow: none; translate: none; }
+button.scr-sound.on { border-color: rgba(143, 240, 200, .7); }
+button.scr-sound .scr-sound-text { max-width: 0; margin-left: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease, margin-left .25s ease; }
+button.scr-sound:is(:hover, :focus-visible) .scr-sound-text { max-width: 24vw; margin-left: .7vw; }
+button.scr-sound:active { translate: none; box-shadow: none; }
 @media (max-width: 700px) { .scr-grid { grid-template-columns: 1fr; } }
 
 /* 큰 화면 한켠의 생존자 목록 */
