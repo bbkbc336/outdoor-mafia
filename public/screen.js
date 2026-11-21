@@ -84,6 +84,7 @@ function viewOf(v) {
         <p class="scr-sub">${why}</p>
         ${v.phase === 'gathering' ? `<p class="scr-place">집결 장소 <b>${esc(m.place)}</b></p>` : ''}
         ${timer(v)}
+        ${v.phase === 'discussion' && m.discuss ? `<p class="scr-sub">🗳️ 투표로 넘어가기 <b>${m.discuss.vote}/${m.discuss.needVote}</b> · ⏱ 1분 추가 <b>${m.discuss.extend}/${m.discuss.needExtend}</b></p>` : ''}
         <div class="scr-out">이번 회의에서 확인된 탈락자: <b>${(m.revealed || []).map(esc).join(', ') || '없음'}</b></div></div>`;
     }
     case 'voting': {

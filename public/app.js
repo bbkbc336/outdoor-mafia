@@ -614,7 +614,24 @@ function viewMeeting(v) {
   }
   return `<div class="phase center">토론</div>
     <div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>
+    ${v.me.status === 'alive' ? discussCard(m.discuss) : ''}
     ${meetingHead(v)}${ghostNote}${rosterCard(v)}`;
+}
+
+// 토론 중 회의 진행 투표: 투표로 넘어가기는 살아 있는 사람 전원, 1분 추가는 70%가 누르면 바로 진행됩니다.
+function discussCard(d) {
+  if (!d) return '';
+  const left = d.maxExtend - d.extends;
+  const btn = (c, label) => {
+    const on = d.mine === c, n = d[c], need = c === 'vote' ? d.needVote : d.needExtend;
+    const off = c === 'extend' && left <= 0 && !on;
+    return `<button class="dvbtn ${on ? 'primary' : ''}" data-a="discuss" data-c="${c}" data-needs-online aria-pressed="${on}" ${off ? 'disabled' : ''}>
+      <span class="dvlabel">${label}</span><span class="dvcount">${n} / ${need}명</span></button>`;
+  };
+  return `<div class="card dvcard"><h3 style="margin:0 0 4px">회의 진행 투표</h3>
+    <p class="small muted" style="margin:0 0 10px">투표로 넘어가기는 <b>모두(${d.needVote}명)</b>, 1분 추가는 <b>${d.needExtend}명(70%)</b>이 누르면 바로 진행돼요. 다시 누르면 취소.</p>
+    <div class="grid2">${btn('vote', '🗳️ 투표로 넘어가기')}${btn('extend', '⏱ 1분 추가')}</div>
+    <p class="small muted" style="margin:8px 0 0">${left > 0 ? `시간 추가는 이번 회의에서 ${left}번 더 할 수 있어요.` : '이번 회의의 시간 추가를 모두 썼어요.'}</p></div>`;
 }
 
 function viewVoting(v) {
@@ -679,6 +696,7 @@ app.addEventListener('click', (e) => {
   if (a === 'bigList') return openModal(`<h2>생존자와 회의 기록</h2>${secretInfo(S.view, true)}<button data-act="close" style="margin-top:16px">닫기</button>`);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
+  if (a === 'discuss') return act('discuss', { choice: b.dataset.c }).then(r => { if (r && r.message && r.kind !== 'picked') toast(r.message, r.kind === 'cancel' ? '' : 'good', 2500); });
   if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge, t.readyAt); }
   if (a === 'answer') return act('answer', { taskId: b.dataset.task, option: b.dataset.opt }).then(r => { if (r && r.message) toast('✅ ' + r.message, 'good', 3000); });
 });

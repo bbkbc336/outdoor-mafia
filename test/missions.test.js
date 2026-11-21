@@ -129,6 +129,35 @@ console.log('\n[1인당 임무 수가 등록 목록보다 많을 때]');
   ok(G.list(r5).every(p => p.tasks.every((t, i) => i === 0 || t.mid !== p.tasks[i - 1].mid)), '같은 임무가 연달아 나오지 않음');
 }
 
+console.log('\n[토론 중 회의 진행 투표]');
+{
+  const r6 = G.createRoom(new Set());
+  ['가', '나', '다', '라', '마'].forEach(n => G.join(r6, n));
+  G.assignTags(r6); G.updateSettings(r6, { mafiaCount: 1, startProtect: 0, gatherSec: 0 });
+  G.assignRoles(r6); G.startGame(r6, true);
+  const ps = G.list(r6);
+  G.hostMeeting(r6); G.startDiscussion(r6);
+  const seq = () => r6.phaseSeq;
+  const dd = G.playerView(r6, ps[0]).meeting.discuss;
+  ok(dd.needVote === 5 && dd.needExtend === 4, `5명 생존: 투표로 넘어가기 5명(전원), 1분 추가 4명(70%) — ${dd.needVote}/${dd.needExtend}`);
+  G.discussVote(r6, ps[0], 'extend', seq()); G.discussVote(r6, ps[1], 'extend', seq());
+  const end0 = r6.phaseEndsAt;
+  ok(G.playerView(r6, ps[0]).meeting.discuss.mine === 'extend' && G.playerView(r6, ps[2]).meeting.discuss.mine === null, '내가 고른 쪽만 표시');
+  ok(G.discussVote(r6, ps[1], 'extend', seq()).kind === 'cancel' && G.playerView(r6, ps[0]).meeting.discuss.extend === 1, '같은 버튼 다시 누르면 취소');
+  G.discussVote(r6, ps[1], 'extend', seq());
+  ok(G.discussVote(r6, ps[2], 'extend', seq()).kind === 'picked' && r6.phaseEndsAt === end0, '3명(60%)은 아직 부족');
+  const ex = G.discussVote(r6, ps[3], 'extend', seq());
+  ok(ex.kind === 'extended' && r6.phaseEndsAt - end0 >= 59000 && r6.phase === 'discussion', '4명(70% 이상)이 1분 추가 → 토론 1분 늘어남');
+  ok(G.playerView(r6, ps[0]).meeting.discuss.extend === 0 && r6.dvote.extends === 1, '추가 뒤 표는 초기화, 추가 횟수 1');
+  for (let k = 0; k < 2; k++) for (const q of ps.slice(0, 4)) G.discussVote(r6, q, 'extend', seq());
+  throws(() => G.discussVote(r6, ps[0], 'extend', seq()), /3번까지/, '시간 추가는 회의마다 3번까지');
+  for (const q of ps.slice(0, 4)) G.discussVote(r6, q, 'vote', seq());
+  ok(r6.phase === 'discussion', '4명(한 명 빠짐)이면 그대로 토론');
+  const vv = G.discussVote(r6, ps[4], 'vote', seq());
+  ok(vv.kind === 'voting' && r6.phase === 'voting', '전원이 투표로 넘어가기 → 바로 투표 시작');
+  throws(() => G.discussVote(r6, ps[4], 'vote', r6.phaseSeq), /토론|단계/, '투표 단계에서는 진행 투표 불가');
+}
+
 console.log('\n[장소 사진]');
 {
   const r4 = G.createRoom(new Set());

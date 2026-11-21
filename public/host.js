@@ -171,7 +171,8 @@ function tabRun(v) {
         ${v.phaseEndsAt ? `${v.phase === 'gathering' ? '<p class="small muted">시간이 되면 자동으로 토론이 시작됩니다</p>' : ''}<div class="timer" data-until="${v.phaseEndsAt}" ${v.paused ? `data-frozen="${v.remainMs}"` : ''}></div>` : ''}</div>
       <div class="btns">${v.phase === 'gathering'
         ? '<button class="primary" data-run="discussion">모두 모였음 → 토론 시작</button><button data-run="vote">토론 없이 바로 투표</button>'
-        : '<button class="primary" data-run="vote">지금 투표 시작</button><button data-run="extend">토론 1분 연장</button>'}</div>`;
+        : '<button class="primary" data-run="vote">지금 투표 시작</button><button data-run="extend">토론 1분 연장</button>'}</div>
+      ${v.phase === 'discussion' && m.discuss ? `<p class="small muted">참가자 진행 투표: 투표로 넘어가기 <b>${m.discuss.vote}/${m.discuss.needVote}</b>(전원) · 1분 추가 <b>${m.discuss.extend}/${m.discuss.needExtend}</b>(70%) · 시간 추가 ${m.discuss.extends}/${m.discuss.maxExtend}번 씀</p>` : ''}`;
   } else if (v.phase === 'voting') {
     const vt = v.vote || { cast: 0, eligible: 0, ballots: [] };
     main = `<div class="card hl"><div class="phase">투표 중</div>

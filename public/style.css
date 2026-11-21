@@ -609,3 +609,6 @@ button.rolecard:active { transform: none; translate: none; box-shadow: none; }
 .locphoto-btns label.btn { display: inline-flex; align-items: center; width: auto; min-height: 44px; margin: 0; padding: 8px 12px; font-size: 16px; }
 .locphoto-btns label.btn:focus-within { outline: 3px solid var(--hud, #46c8ff); outline-offset: 2px; }
 .locphoto { display: block; width: 100%; height: auto; max-height: 260px; object-fit: cover; margin-top: 10px; border-radius: 12px; border: 2px solid var(--line); background: #0a0c10; }
+/* 토론 중 회의 진행 투표 */
+.dvcard .dvbtn { display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 76px; padding: 10px 8px; font-size: 18px; }
+.dvcard .dvcount { font-family: var(--digits, sans-serif); font-size: 15px; opacity: .85; }
