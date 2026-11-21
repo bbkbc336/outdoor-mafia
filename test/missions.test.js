@@ -217,6 +217,29 @@ console.log('\n[집결 도착 확인 · 결과 후 자동 재개]');
   ok(G.hostView(r10, () => true).settings.resultSec === 60, '예전 방도 설정 화면에 기본값 60초');
 }
 
+console.log('\n[미션 바꾸기 (1인당 3번)]');
+{
+  const r11 = G.createRoom(new Set());
+  G.saveLocations(r11, [{ name: '매점' }, { name: '정문' }, { name: '분수대' }]);
+  ['가', '나', '다', '라'].forEach(n => G.join(r11, n));
+  G.assignTags(r11); G.updateSettings(r11, { mafiaCount: 1, startProtect: 0, tasksPerPlayer: 3 });
+  G.assignRoles(r11);
+  const p = G.list(r11).find(x => x.role === 'citizen');
+  throws(() => G.swapTask(r11, p, p.tasks[0].id, r11.phaseSeq), /완료할 수 없습니다/, '게임 시작 전에는 바꿀 수 없음');
+  G.startGame(r11, true);
+  const total = r11.citizenTaskTotal, n0 = p.tasks.length;
+  ok(G.playerView(r11, p).me.swapsLeft === 3, '처음엔 3번');
+  for (let k = 0; k < 3; k++) {
+    const old = p.tasks[p.taskIdx];
+    const r = G.swapTask(r11, p, old.id, r11.phaseSeq);
+    const now = p.tasks[p.taskIdx];
+    ok(r.kind === 'swapped' && now.id !== old.id && now.loc !== old.loc && now.game !== old.game, `${k + 1}번째 바꾸기: 다른 장소·다른 게임 (${r.message})`);
+  }
+  ok(p.tasks.length === n0 && r11.citizenTaskTotal === total, '임무 개수·진행률 기준은 그대로');
+  throws(() => G.swapTask(r11, p, p.tasks[p.taskIdx].id, r11.phaseSeq), /3번까지/, '4번째는 거부');
+  throws(() => G.swapTask(r11, G.list(r11).find(x => x !== p), 'nope', r11.phaseSeq), /바뀌었습니다/, '지금 미션이 아니면 거부');
+}
+
 console.log('\n[장소 사진]');
 {
   const r4 = G.createRoom(new Set());

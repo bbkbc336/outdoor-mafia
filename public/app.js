@@ -510,6 +510,9 @@ function taskCard(v) {
     ${t.type === 'report' && t.step === 1 && t.options ? t.options.map(o => `<button class="choice" data-a="answer" data-task="${esc(t.id)}" data-opt="${esc(o)}" data-needs-online>${esc(o)}</button>`).join('') : ''}
     ${t.type === 'carry' && t.step === 1 ? '<p class="small muted">출발지 확인 완료 ✔</p>' : ''}
     ${t.type === 'game' && t.challenge ? '<button class="primary" data-a="resumeGame" data-needs-online style="margin-top:10px">▶ 이어서 하기</button>' : ''}
+    ${v.phase === 'active' && v.me.status !== 'dead' ? (v.me.swapsLeft > 0
+      ? `<button class="ghostbtn sm swapbtn" data-a="swapTask" data-task="${esc(t.id)}" data-needs-online>🔄 미션 바꾸기 <span class="muted">(남은 ${v.me.swapsLeft}번)</span></button>`
+      : `<p class="small muted" style="margin:10px 0 0">미션 바꾸기를 모두 썼어요 (${v.me.swapsMax}번)</p>`) : ''}
   </div>`;
 }
 
@@ -709,6 +712,11 @@ app.addEventListener('click', (e) => {
   if (a === 'bigList') return openModal(`<h2>생존자와 회의 기록</h2>${secretInfo(S.view, true)}<button data-act="close" style="margin-top:16px">닫기</button>`);
   if (a === 'emergency') return doEmergency();
   if (a === 'vote') return openVote(b.dataset.id, b.dataset.name);
+  if (a === 'swapTask') {
+    const left = S.view && S.view.me.swapsLeft;
+    return confirmBox('미션을 바꿀까요?', `장소를 못 찾거나 QR이 안 찍히는 등 진행이 안 될 때 쓰세요. 지금 미션 대신 다른 미션이 나옵니다.<br>한 판에 ${S.view.me.swapsMax}번까지 · 남은 <b>${left}번</b>`, '바꾸기')
+      .then(yes => yes && act('swapTask', { taskId: b.dataset.task })).then(r => { if (r && r.message) toast('🔄 ' + r.message, 'good', 3000); });
+  }
   if (a === 'arrive') return act('arrive').then(r => { if (r && r.kind === 'discussion') toast(r.message, 'good', 2500); });
   if (a === 'discuss') return act('discuss', { choice: b.dataset.c }).then(r => { if (r && r.message && r.kind !== 'picked') toast(r.message, r.kind === 'cancel' ? '' : 'good', 2500); });
   if (a === 'resumeGame') { const t = v.me.task; return openGame(t.id, t.game, t.challenge, t.readyAt); }

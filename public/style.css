@@ -628,3 +628,5 @@ button.rolecard:active { transform: none; translate: none; box-shadow: none; }
 select.locno { flex: 0 0 6.6em; width: 6.6em; min-width: 0; padding-left: 8px; padding-right: 4px; font-size: 16px; }
 .locedit .row { min-width: 0; }
 .locedit .row > input { min-width: 0; }
+/* 미션 바꾸기: 임무 카드 아래 작은 버튼 */
+button.swapbtn { display: block; width: 100%; margin-top: 10px; }

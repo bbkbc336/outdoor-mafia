@@ -436,6 +436,7 @@ function syncLocDraft() {
 }
 
 const LOG_FMT = {
+  swap: (l) => `🔄 ${l.by} 미션 바꾸기 (${l.from} → ${l.to})`,
   assign: (l) => `역할 배정 (마피아: ${l.mafia.join(', ')})`, start: () => '게임 시작',
   kill: (l) => `🔪 ${l.by} → ${l.target} 암살`, report: (l) => `🚨 ${l.by}이(가) ${l.body} 신고${l.where ? ' @' + l.where : ''} (공개: ${l.revealed.join(', ') || '없음'})`,
   emergency: (l) => `📢 ${l.by} 긴급회의 (공개: ${l.revealed.join(', ') || '없음'})`, hostMeeting: (l) => `📢 진행자 회의 소집 (공개: ${l.revealed.join(', ') || '없음'})`,
