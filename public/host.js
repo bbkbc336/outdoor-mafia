@@ -358,7 +358,7 @@ function tabMissions(v) {
   const dis = locked ? 'disabled' : '';
   const locOpts = (sel) => `<option value="">장소 선택</option>` + v.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
   const head = d.length
-    ? `<p>등록된 임무 <b>${d.length}개</b> 중에서 한 사람에게 <b>${Math.min(per, d.length)}개</b>씩, 사람마다 다른 순서로 배정합니다.</p>
+    ? `<p>등록된 임무 <b>${d.length}개</b> 중에서 한 사람에게 <b>${per}개</b>씩, 사람마다 다른 순서로 배정합니다.</p>
        ${d.length < per ? `<p class="small muted">1인당 임무 수(${per}개)가 목록(${d.length}개)보다 많아 목록을 반복해 ${per}개씩 배정합니다.</p>` : ''}`
     : '<p>임무 목록이 비어 있어 <b>장소마다 미니게임을 무작위로 배정</b>합니다. 장소에는 QR만 두면 됩니다. 직접 정하려면 임무를 추가하세요.</p>';
   return `${locked ? '<div class="card">임무는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
@@ -401,6 +401,22 @@ function defaultMissions(v) {
   return out;
 }
 function renderKeepMis() { const d = H.misDraft; render(); H.misDraft = d; }
+
+// 저장한 것과 화면의 초안이 다른지(탭을 옮길 때 저장 안 한 변경 확인용)
+const locKey = (ls) => JSON.stringify((ls || []).map(l => [l.id || '', String(l.name || '').trim(), Number(l.no) || 0, !!l.item, !!l.box,
+  l.sign ? [String(l.sign.question || '').trim(), (l.sign.options || []).join(','), String(l.sign.answer || '').trim()] : null]));
+const misKey = (ms) => JSON.stringify((ms || []).map(m => [m.id || '', m.type, m.loc || '', m.loc2 || '', m.game || '', String(m.title || '').trim(), String(m.desc || '').trim(),
+  m.q ? [String(m.q.question || '').trim(), (m.q.options || []).join(','), String(m.q.answer || '').trim()] : null]));
+function placesDirty(v) {
+  if (H.tab !== 'places' || !H.locDraft || v.phase !== 'lobby' || !document.querySelector('.locedit')) return false;
+  syncLocDraft();
+  return locKey(H.locDraft) !== locKey(v.locations);
+}
+function missionsDirty(v) {
+  if (H.tab !== 'missions' || !H.misDraft || v.phase !== 'lobby') return false;
+  syncMisDraft();
+  return misKey(H.misDraft) !== misKey(v.missions);
+}
 
 function syncLocDraft() {
   document.querySelectorAll('.locedit').forEach(el => {
@@ -477,7 +493,20 @@ async function shareInvite(kind, code) {
 
 app.addEventListener('click', async (e) => {
   const tab = e.target.closest('[data-tab]');
-  if (tab) { H.tab = tab.dataset.tab; if (H.tab === 'places') H.locDraft = null; if (H.tab === 'missions') H.misDraft = null; return render(); }
+  if (tab) {
+    // 저장하지 않은 장소·임무 변경이 있으면 탭을 옮기기 전에 저장할지 묻습니다(그냥 옮기면 지운·고친 내용이 사라짐).
+    if (tab.dataset.tab !== H.tab && H.view) {
+      const dirtyP = placesDirty(H.view), dirtyM = !dirtyP && missionsDirty(H.view);
+      if (dirtyP || dirtyM) {
+        const what = dirtyP ? '장소' : '임무';
+        if (!(await confirmBox(`${what} 변경을 저장할까요?`, `저장하지 않은 ${what} 변경이 있습니다. 저장하지 않고 옮기면 지우거나 고친 내용이 사라집니다. 취소하면 이 탭에 남습니다.`, '저장하고 이동'))) return;
+        const r = dirtyP ? await act('locations', { locations: H.locDraft }) : await act('missions', { missions: H.misDraft });
+        if (!r) return;
+        toast(`${what}을(를) 저장했습니다.`, 'good');
+      }
+    }
+    H.tab = tab.dataset.tab; if (H.tab === 'places') H.locDraft = null; if (H.tab === 'missions') H.misDraft = null; return render();
+  }
 
   const run = e.target.closest('[data-run]');
   if (run && !run.disabled) {
@@ -531,7 +560,8 @@ app.addEventListener('click', async (e) => {
     if (a === 'add') { H.misDraft.push({ type: 'game', game: 'random', loc: '', title: '', desc: '' }); return renderKeepMis(); }
     if (a === 'del') { H.misDraft.splice(Number(mis.dataset.i), 1); return renderKeepMis(); }
     if (a === 'fill') {
-      if (H.misDraft.length && !(await confirmBox('기본 임무로 채울까요?', '지금 목록 뒤에 장소마다 미니게임(무작위) 임무가 하나씩 추가됩니다.', '채우기'))) return;
+      const ls = H.view.locations, names = ls.map(l => esc(l.name)).join(', ');
+      if (!(await confirmBox(`장소 ${ls.length}곳에 미니게임을 채울까요?`, `저장된 장소마다 미니게임(무작위) 임무가 하나씩 ${H.misDraft.length ? '지금 목록 뒤에 ' : ''}추가됩니다.<br><b>${names}</b><br>안 쓰는 장소가 있으면 장소 탭에서 지우고 저장한 뒤 채우세요.`, '채우기'))) return;
       H.misDraft = H.misDraft.concat(defaultMissions(H.view)); return renderKeepMis();
     }
     if (a === 'clear') {
