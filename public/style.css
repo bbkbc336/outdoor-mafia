@@ -205,8 +205,10 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .crate { width: 120px; height: 120px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 60px; touch-action: none; box-shadow: 0 8px 0 rgba(0,0,0,0.35); }
 .dragging { z-index: 5; position: relative; transition: none; }
 .bins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.bins.b4 { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.bin { min-height: 130px; border: 4px dashed; border-radius: 18px; display: flex; flex-wrap: wrap; align-content: flex-end; justify-content: center; font-size: 22px; padding: 6px; }
+.bins.b4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.bin { min-width: 0; height: 130px; overflow: hidden; border: 4px dashed; border-radius: 18px; display: flex; flex-wrap: wrap; align-content: flex-end; justify-content: center; gap: 2px; font-size: 22px; padding: 6px; }
+.bin .binbox { flex: 0 0 auto; width: 44%; text-align: center; line-height: 1.2; }
+.bin .bincnt { flex: 0 0 100%; text-align: center; font-family: var(--digits, sans-serif); font-size: 18px; line-height: 1.2; color: #fff; }
 .levels { display: flex; justify-content: center; gap: 22px; }
 .track { position: relative; width: 78px; height: min(52vh, 360px); background: #0a0c10; border: 3px solid var(--line); border-radius: 16px; overflow: hidden; touch-action: none; }
 .track .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(0deg, var(--warn), var(--accent)); }

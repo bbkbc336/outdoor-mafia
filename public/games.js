@@ -345,7 +345,9 @@ const Games = (() => {
         if (c !== d.boxes[i]) return shake(top.firstChild || top);
         bins.push(c); i++; tick();
         const bin = bottom.querySelector(`[data-color="${c}"]`);
-        bin.textContent = '📦'.repeat(Math.min(6, bins.filter(x => x === c).length));
+        // 칸 크기는 고정: 상자 그림은 4개까지(2×2), 그 이상은 숫자로. 그림을 이어 붙이면 휴대폰에 따라 칸이 화면 밖으로 밀립니다.
+        const n = bins.filter(x => x === c).length;
+        bin.innerHTML = '<span class="binbox">📦</span>'.repeat(Math.min(4, n)) + (n > 4 ? `<b class="bincnt">×${n}</b>` : '');
         bin.classList.remove('got'); void bin.offsetWidth; bin.classList.add('got');
         drawQueue();
         if (i === d.boxes.length) win({ bins });
