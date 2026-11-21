@@ -255,6 +255,52 @@ function tabSettings(v) {
   <div class="card small muted">기본값은 약 40명·1시간(20~25분짜리 두 판) 기준입니다: 마피아 5명, 1인당 임무 3개, 목표 80%, 암살 대기 60초, 토론 120초, 집결 180초. 현장 시험 후 조정하세요.</div>`;
 }
 
+// 장소 사진: 저장된 장소만(장소 id가 있어야 함). 사진은 참가자 임무 카드에 나와 장소를 찾기 쉽게 합니다.
+function locPhotoRow(v, l) {
+  const saved = l.id && v.locations.find(x => x.id === l.id);
+  if (!saved) return '<p class="small muted" style="margin:6px 0 0">📷 장소를 저장하면 사진을 넣을 수 있어요.</p>';
+  const name = esc(saved.name);
+  return `<div class="locphoto-row">
+    ${saved.photo ? `<img class="locthumb" src="/api/photo?code=${v.code}&loc=${saved.id}&v=${saved.photo}" alt="${name} 사진">` : '<div class="locthumb empty" aria-hidden="true">📷</div>'}
+    <div class="locphoto-btns">
+      <label class="btn sm">${saved.photo ? '사진 바꾸기' : '📷 장소 사진 넣기'}<input type="file" accept="image/*" data-photo="${saved.id}" class="visually-hidden"></label>
+      ${saved.photo ? `<button class="sm ghostbtn" data-photo-del="${saved.id}" aria-label="${name} 사진 지우기">사진 지우기</button>` : ''}
+    </div></div>`;
+}
+
+// 휴대폰 사진은 크므로 긴 쪽 960px JPEG로 줄여 올립니다(보통 100KB 안팎). 사진 방향(EXIF)도 바로잡습니다.
+async function shrinkPhoto(file) {
+  let src;
+  try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (_) {
+    src = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = URL.createObjectURL(file); });
+  }
+  const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight;
+  for (const [max, q] of [[960, 0.72], [800, 0.62], [640, 0.55]]) {
+    const k = Math.min(1, max / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w0 * k); c.height = Math.round(h0 * k);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    const url = c.toDataURL('image/jpeg', q);
+    if (url.length < 400000) return url;
+  }
+  throw new Error('사진이 너무 큽니다.');
+}
+async function sendLocPhoto(loc, data) {
+  if (!H.online) { toast('연결이 끊겨 있습니다.', 'bad'); return; }
+  const r = await postJSON('/api/photo', { code: H.code, token: H.token, loc, data });
+  if (r.view) { syncClock(r.view); H.view = r.view; renderKeepDraft(); }
+  if (!r.ok) return toast(r.error || '사진을 올리지 못했습니다.', 'bad', 3500);
+  toast(data ? '장소 사진을 넣었습니다. 참가자 임무 카드에 나옵니다.' : '장소 사진을 지웠습니다.', 'good');
+}
+document.addEventListener('change', async (e) => {
+  const inp = e.target.closest && e.target.closest('input[data-photo]');
+  if (!inp || !inp.files || !inp.files[0]) return;
+  if (H.locDraft) syncLocDraft();
+  toast('사진을 올리는 중…', '', 6000);
+  try { await sendLocPhoto(inp.dataset.photo, await shrinkPhoto(inp.files[0])); } catch (_) { toast('사진을 읽지 못했습니다. 다른 사진으로 해 보세요.', 'bad'); }
+  inp.value = '';
+});
+
 function tabPlaces(v) {
   const locked = v.phase !== 'lobby';
   if (!H.locDraft || locked) H.locDraft = structuredClone(v.locations);
@@ -282,6 +328,7 @@ function tabPlaces(v) {
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 ${i + 1}" ${locked ? 'disabled' : ''} style="flex:3">
         <span class="kbd" style="flex:0;white-space:nowrap">QR ${String(i + 1).padStart(2, '0')}번</span>
         ${locked ? '' : `<button class="sm" data-loc="del" data-i="${i}" style="flex:0" ${H.locDraft.length <= 1 ? 'disabled' : ''}>삭제</button>`}</div>
+      ${locPhotoRow(v, l)}
       <label class="check"><input type="checkbox" data-f="item" ${l.item ? 'checked' : ''} ${locked ? 'disabled' : ''}> 물품 출발지 (운반할 물건 비치)</label>
       <label class="check"><input type="checkbox" data-f="box" ${l.box ? 'checked' : ''} ${locked ? 'disabled' : ''}> 도착 상자 비치</label>
       <label class="check"><input type="checkbox" data-f="hasSign" ${l.sign ? 'checked' : ''} ${locked ? 'disabled' : ''}> 현장 보고 표지 있음</label>
@@ -488,6 +535,12 @@ app.addEventListener('click', async (e) => {
     }
   }
 
+  const pdel = e.target.closest('[data-photo-del]');
+  if (pdel) {
+    if (H.locDraft) syncLocDraft();
+    if (await confirmBox('장소 사진을 지울까요?', '참가자 임무 카드에서도 사라집니다.', '지우기', true)) await sendLocPhoto(pdel.dataset.photoDel, null);
+    return;
+  }
   const loc = e.target.closest('[data-loc]');
   if (loc) {
     syncLocDraft();

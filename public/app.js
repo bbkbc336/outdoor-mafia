@@ -505,6 +505,7 @@ function taskCard(v) {
   return `<div class="card hl">
     <div class="row"><h3 style="margin:0">${label} <span class="muted">(임무 ${t.index}/${t.total})</span></h3></div>
     <p style="font-size:20px;margin-top:8px">📍 ${how}</p>
+    ${t.photo && !(t.type === 'report' && t.step === 1) ? `<img class="locphoto" src="${esc(t.photo)}" alt="${esc(t.type === 'carry' && t.step === 1 ? t.loc2 : t.loc)} 사진" width="960" height="720" loading="lazy">` : ''}
     ${t.desc ? `<p class="small" style="color:var(--accent)">${esc(t.desc)}</p>` : ''}
     ${t.type === 'report' && t.step === 1 && t.options ? t.options.map(o => `<button class="choice" data-a="answer" data-task="${esc(t.id)}" data-opt="${esc(o)}" data-needs-online>${esc(o)}</button>`).join('') : ''}
     ${t.type === 'carry' && t.step === 1 ? '<p class="small muted">출발지 확인 완료 ✔</p>' : ''}

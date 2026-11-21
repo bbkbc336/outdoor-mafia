@@ -114,5 +114,26 @@ console.log('\n[암살: 이름표 QR 찍기 모드]');
   ok(G.kill(r3, m, c.id, r3.phaseSeq).targetName === c.name, '모드가 꺼져 있으면 지금처럼 목록으로 암살');
 }
 
+console.log('\n[장소 사진]');
+{
+  const r4 = G.createRoom(new Set());
+  G.saveLocations(r4, [{ name: '매점' }, { name: '정문' }]);
+  const [A, B] = r4.locations;
+  throws(() => G.setLocPhoto(r4, 'nope', 123), /장소를 찾을 수 없습니다/, '없는 장소에는 사진 불가');
+  G.setLocPhoto(r4, A.id, 111);
+  ok(r4.locations[0].photo === 111, '장소에 사진 버전 저장');
+  G.saveLocations(r4, [{ id: B.id, name: '정문' }, { id: A.id, name: '매점 앞' }]);
+  ok(r4.locations.find(l => l.id === A.id).photo === 111 && !r4.locations.find(l => l.id === B.id).photo, '장소를 다시 저장·순서 변경해도 사진 유지');
+  ['가', '나', '다', '라'].forEach(n => G.join(r4, n));
+  G.assignTags(r4); G.updateSettings(r4, { mafiaCount: 1, startProtect: 0 });
+  G.assignRoles(r4); G.startGame(r4, true);
+  const p = G.list(r4).find(x => x.role === 'citizen');
+  const t = G.playerView(r4, p).me.task;
+  const want = t.loc === '매점 앞' ? `/api/photo?code=${r4.code}&loc=${A.id}&v=111` : undefined;
+  ok(t.photo === want, `임무 카드에 가야 할 장소의 사진 주소 (${t.loc}: ${t.photo || '사진 없음'})`);
+  G.setLocPhoto(r4, A.id, 0);
+  ok(!r4.locations.find(l => l.id === A.id).photo, '사진 지우기');
+}
+
 console.log(`\n결과: ${passed}개 통과, ${failed}개 실패`);
 process.exit(failed ? 1 : 0);

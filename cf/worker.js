@@ -33,7 +33,7 @@ export default {
       if (route === '/api/ping') return jsonRes(200, { ok: true, t: Date.now(), ws: true, push: true });
       // 회의 알림(웹 푸시)용 공개 열쇠. 열쇠는 처음 쓸 때 Keys가 만들어 보관합니다.
       if (route === '/api/push-key') { const k = await vapidKeys(env); return jsonRes(200, { key: k.pub }); }
-      if (route === '/api/ws' || route === '/print') {
+      if (route === '/api/ws' || route === '/print' || (route === '/api/photo' && request.method === 'GET')) {
         const code = upper(url.searchParams.get('code'));
         if (!/^[A-Z0-9]{4}$/.test(code)) return new Response('방을 찾을 수 없습니다. 방 코드를 확인하세요.', { status: 404 });
         return env.ROOMS.get(env.ROOMS.idFromName(code)).fetch(request);
@@ -41,7 +41,7 @@ export default {
       if (route.startsWith('/api/')) {
         if (request.method !== 'POST') return jsonRes(405, { error: '허용되지 않은 요청입니다.' });
         const text = await request.text();
-        if (text.length > 100000) return jsonRes(400, { error: '잘못된 요청입니다.' });
+        if (text.length > (route === '/api/photo' ? 450000 : 100000)) return jsonRes(400, { error: '사진이 너무 크거나 잘못된 요청입니다.' });
         let body;
         try { body = text ? JSON.parse(text) : {}; } catch (_) { return jsonRes(400, { error: '잘못된 요청입니다.' }); }
         if (route === '/api/rooms') return createRoom(request, env);
@@ -134,6 +134,9 @@ export class Room extends DurableObject {
       beat: async (code, pid) => { self.seen.set(pid, Date.now()); },
       online: async () => self.onlineSet(),
       allowCreate: async () => true,
+      // 장소 사진은 방 데이터와 따로 저장합니다(방 데이터는 휴대폰마다 자주 보내므로 가볍게).
+      putPhoto: (code, loc, ph) => ctx.storage.put('photo:' + loc, ph),
+      getPhoto: async (code, loc) => (await ctx.storage.get('photo:' + loc)) || null,
     };
     this.handle = createHandler(this.store);
   }
