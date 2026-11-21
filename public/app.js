@@ -184,7 +184,7 @@ function pushCard() {
 function onChange(prev, v) {
   Awake.set(v.settings && v.settings.keepAwake && !['lobby', 'ended'].includes(v.phase));
   if (!prev) {
-    // 휴대폰 카메라로 QR(주소)을 열고 들어온 경우: 대기 중이면 이름표 연결, 게임 중이면 임무·신고
+    // 휴대폰 카메라로 QR(주소)을 열고 들어온 경우: 대기 중이면 등 QR 연결, 게임 중이면 임무·신고
     if (S.pendingScan && v.phase !== 'briefing') { const s = S.pendingScan; S.pendingScan = null; setTimeout(() => handleScan('?s=' + s), 300); } // 휴대폰 카메라로 찍은 QR: 주소 형태 그대로 넘김(찍기 모드 암살 인정)
     else S.pendingScan = null;
     return;
@@ -293,7 +293,7 @@ function openGame(taskId, game, data, readyAt) {
   });
 }
 
-function openScan() { Scanner.open(S.view && S.view.phase === 'lobby' ? '내 목걸이 이름표 QR' : '장소 QR 또는 쓰러진 사람의 이름표', handleScan); }
+function openScan() { Scanner.open(S.view && S.view.phase === 'lobby' ? '내 등 QR' : '장소 QR 또는 쓰러진 사람의 등 QR', handleScan); }
 
 // 암살 성공: 마피아 화면만 붉게 한 번 반짝입니다.
 function killFlash() {
@@ -306,19 +306,19 @@ function killFlash() {
 const killByScan = () => !!(S.view && S.view.settings && S.view.settings.killByScan);
 const killReady = () => { const m = S.view && S.view.mafia; return !!m && m.killReadyAt <= serverNow() && !S.view.paused; };
 
-// 이름표 찍기 모드: 상대 목걸이 QR을 직접 찍어야 암살됩니다.
+// 등 QR 찍기 모드: 상대 등 QR을 직접 찍어야 암살됩니다.
 function openKillScan() {
-  Scanner.open('암살할 사람의 목걸이 이름표 QR', (val) => confirmKillByQr(val), { noManual: true });
+  Scanner.open('암살할 사람의 등 QR', (val) => confirmKillByQr(val), { noManual: true });
 }
 async function confirmKillByQr(val, name) {
   const v = S.view, m = v && v.mafia;
   if (!m) return;
-  if (!/[?&]s=[A-Za-z0-9]+/.test(String(val || ''))) return toast('코드 입력으로는 암살할 수 없습니다. 상대 목걸이 QR을 카메라로 직접 찍으세요.', 'bad', 3500);
+  if (!/[?&]s=[A-Za-z0-9]+/.test(String(val || ''))) return toast('코드 입력으로는 암살할 수 없습니다. 상대 등 QR을 카메라로 직접 찍으세요.', 'bad', 3500);
   // 서버와 같은 규칙으로 읽음: 링크(?s=P07)·P07·손으로 친 p7 모두 같은 코드
   let code = String(val || '').trim(); const q = code.match(/[?&]s=([A-Za-z0-9]+)/); if (q) code = q[1];
   code = code.toUpperCase(); const n = code.match(/^P0*(\d{1,2})$/); if (n) code = 'P' + String(Number(n[1])).padStart(2, '0');
   const t = name ? { name } : m.targets.find(x => x.code === code);
-  if (!t) return toast('암살할 수 있는 사람의 이름표가 아닙니다. (동료·탈락자·내 이름표는 안 됨)', 'bad', 3500);
+  if (!t) return toast('암살할 수 있는 사람의 등 QR이 아닙니다. (동료·탈락자·내 QR은 안 됨)', 'bad', 3500);
   const yes = await confirmBox(`${t.name} 님을 암살합니까?`, '실행하면 되돌릴 수 없습니다.', '암살 실행', true);
   if (!yes) return;
   const r = await act('kill', { qr: val });
@@ -414,17 +414,17 @@ function render() {
 
 function viewLobby(v) {
   const tag = v.me.tag, readyN = v.roster.filter(r => r.ready).length;
-  // 1단계: 이름표 QR 연결 → 2단계: 준비 완료. 이름표를 연결해야 준비할 수 있습니다.
+  // 1단계: 등 QR 연결 → 2단계: 준비 완료. 등 QR을 연결해야 준비할 수 있습니다.
   const step1 = tag
-    ? `<div class="card good center"><div class="stepno">1단계 완료</div><h3>내 이름표</h3><div class="big">🏷 ${String(tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 목걸이를 차세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
-    : `<div class="card hl center"><div class="stepno">1단계</div><h3>🏷 이름표 연결</h3><p>받은 목걸이 이름표 뒷면의 QR을 찍으세요.</p>
-        <button class="primary" data-a="scan" data-needs-online>📷 내 이름표 QR 찍기</button></div>`;
+    ? `<div class="card good center"><div class="stepno">1단계 완료</div><h3>내 등 QR</h3><div class="big">🏷 ${String(tag).padStart(2, '0')}번</div><p class="small muted">이 번호의 QR을 등에 붙이세요. 다른 번호를 찍으면 바뀝니다.</p></div>`
+    : `<div class="card hl center"><div class="stepno">1단계</div><h3>🏷 등 QR 연결</h3><p>받은 등 QR을 등에 붙이기 전에 먼저 찍으세요.</p>
+        <button class="primary" data-a="scan" data-needs-online>📷 내 등 QR 찍기</button></div>`;
   const step2 = !tag
-    ? `<div class="readybox locked"><div class="stepno">2단계</div><div class="rb-main">🔒 준비 완료</div><p>이름표를 연결하면 누를 수 있어요</p></div>`
+    ? `<div class="readybox locked"><div class="stepno">2단계</div><div class="rb-main">🔒 준비 완료</div><p>등 QR을 연결하면 누를 수 있어요</p></div>`
     : v.me.ready
       ? `<div class="readybox done"><div class="stepno">2단계 완료</div><div class="rb-main">✔ 준비 완료</div><p>진행자가 역할을 배정할 때까지 기다리세요</p>
           <button class="ghostbtn sm" data-a="ready" data-needs-online>준비 취소</button></div>`
-      : `<button class="readybox go" data-a="ready" data-needs-online><span class="stepno">2단계</span><span class="rb-main">✋ 준비 완료 누르기</span><span class="rb-sub">이름표를 찼으면 눌러 주세요</span></button>`;
+      : `<button class="readybox go" data-a="ready" data-needs-online><span class="stepno">2단계</span><span class="rb-main">✋ 준비 완료 누르기</span><span class="rb-sub">등 QR을 붙였으면 눌러 주세요</span></button>`;
   return `
     <div class="card hl center">
       <div class="phase">방 ${esc(v.code)}에서 기다리는 중</div>
@@ -436,7 +436,7 @@ function viewLobby(v) {
     <a class="guidebtn" href="/guide?room=${encodeURIComponent(v.code)}">📖 규칙 카드뉴스 보기 <span>기다리는 동안 읽어 보세요</span></a>
     <div class="card">
       <div class="row"><h3 style="margin:0">입장한 사람 ${v.roster.length}명</h3><b class="readycount">준비 ${readyN} / ${v.roster.length}</b></div>
-      <ul class="list" style="margin-top:8px">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">이름표 없음</span>'}${r.ready ? '<span class="pill ready">✔ 준비 완료</span>' : '<span class="pill wait">준비 중</span>'}</li>`).join('')}</ul>
+      <ul class="list" style="margin-top:8px">${v.roster.map(r => `<li><span class="name">${esc(r.name)}</span>${r.tag ? `<span class="chip">🏷 ${String(r.tag).padStart(2, '0')}</span>` : '<span class="chip dead">QR 없음</span>'}${r.ready ? '<span class="pill ready">✔ 준비 완료</span>' : '<span class="pill wait">준비 중</span>'}</li>`).join('')}</ul>
     </div>
     <div class="card">
       <h3>복구 코드</h3>
@@ -452,8 +452,8 @@ function rulesCard() {
     <ul class="small" style="padding-left:20px">
       <li><b>시민</b>: 장소 QR을 찍어 임무를 하고, 회의에서 마피아를 찾아 추방합니다. 임무를 모두 끝내거나 마피아를 모두 추방하면 승리.</li>
       <li><b>마피아</b>: 위장 임무를 하며 몰래 암살합니다. 살아 있는 마피아 수가 시민 수 이상이 되면 승리.</li>
-      <li><b>암살</b>: 손이 닿는 거리에서 상대를 직접 보고 있을 때만. 당한 사람은 이름표를 뒤집어 💀 면이 보이게 하고, 그 자리에 멈춰 말하지 않습니다.</li>
-      <li><b>신고</b>: 쓰러진 사람의 이름표 QR을 찍으면 회의가 열립니다. 직접 발견했을 때만 찍으세요.</li>
+      <li><b>암살</b>: 손이 닿는 거리에서 상대를 직접 보고 있을 때만. 당한 사람은 그 자리에 앉아 말없이 기다립니다.</li>
+      <li><b>신고</b>: 그 자리에 앉아 있는(쓰러진) 사람의 등 QR을 찍으면 회의가 열립니다. 직접 발견했을 때만 찍으세요.</li>
       <li><b>유령</b>: 회의 후 탈락자는 유령으로 임무만 계속합니다. 말하거나 힌트를 주면 안 됩니다.</li>
     </ul></details>`;
 }
@@ -466,7 +466,7 @@ function roleBlock(v, compact) {
     ${shown ? `<span class="muted small">나의 역할</span><span class="rname" ${compact ? 'style="font-size:32px"' : ''}>${ROLE_NAME[role]}</span>
       ${role === 'mafia' ? `<span class="rc-p">동료: <b>${mates.length ? mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') : '없음'}</b></span>
         ${killByScan()
-          ? `<span class="rc-p killhow">암살은 상대 <b>목걸이 QR을 직접 찍어서</b>: 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 이름표 찍어 암살</span></span>`
+          ? `<span class="rc-p killhow">암살은 상대 <b>등 QR을 직접 찍어서</b>: 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 등 QR 찍어 암살</span></span>`
           : `<span class="rc-p killhow">암살은 화면 아래 <span class="kbtn">🔒 비밀</span> → <span class="kbtn red">🔪 암살하기</span></span>`}` : ''}
       <span class="rc-p small muted">눌러서 숨기기</span>`
     : `<span class="emoji">🂠</span><span class="rc-p" style="font-weight:800">눌러서 역할 보기</span><span class="rc-p small muted">주변에서 보지 않게 확인하세요</span>`}
@@ -480,8 +480,8 @@ function viewBriefing(v) {
     ${roleBlock(v)}
     <div class="card">
       ${role === 'mafia'
-        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>${killByScan() ? '암살: 상대의 <b>목걸이 이름표 QR을 직접 찍어야</b> 합니다. 화면 아래 <b>🔒 비밀</b> → <b>🔪 이름표 찍어 암살</b>, 또는 <b>📷 QR 스캔</b>으로 찍어도 됩니다. 대기시간이 있습니다.' : '암살: 게임이 시작되면 화면 아래 <b>🔒 비밀</b> 버튼 → <b>🔪 암살하기</b>. <b>손이 닿는 거리에서 직접 보고 있을 때만</b> 하세요. 대기시간이 있습니다.'}</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
-        : `<p><b>시민 할 일</b></p><ul class="small" style="padding-left:20px"><li>안내되는 장소로 가서 QR을 찍어 임무를 완료하세요.</li><li>쓰러진 사람을 발견하면 이름표 QR로 신고하세요.</li><li>회의에서 수상한 사람을 찾아 투표하세요.</li></ul>`}
+        ? `<p><b>마피아 할 일</b></p><ul class="small" style="padding-left:20px"><li>위장 임무를 하며 시민처럼 행동하세요(진행률에는 반영되지 않습니다).</li><li>${killByScan() ? '암살: 상대의 <b>등 QR을 직접 찍어야</b> 합니다. 화면 아래 <b>🔒 비밀</b> → <b>🔪 등 QR 찍어 암살</b>, 또는 <b>📷 QR 스캔</b>으로 찍어도 됩니다. 대기시간이 있습니다.' : '암살: 게임이 시작되면 화면 아래 <b>🔒 비밀</b> 버튼 → <b>🔪 암살하기</b>. <b>손이 닿는 거리에서 직접 보고 있을 때만</b> 하세요. 대기시간이 있습니다.'}</li><li>동료를 감싸 주되 들키지 마세요.</li></ul>`
+        : `<p><b>시민 할 일</b></p><ul class="small" style="padding-left:20px"><li>안내되는 장소로 가서 QR을 찍어 임무를 완료하세요.</li><li>쓰러진 사람을 발견하면 그 사람의 등 QR로 신고하세요.</li><li>회의에서 수상한 사람을 찾아 투표하세요.</li></ul>`}
     </div>
     ${v.me.ack ? '<div class="card good center">✔ 확인 완료. 진행자가 시작할 때까지 기다리세요.</div>'
       : '<button class="primary" data-a="ack" data-needs-online>역할과 규칙을 확인했습니다</button>'}
@@ -525,7 +525,7 @@ function viewActive(v) {
         <p class="small" style="margin:10px 0 0">동료: <b>${v.mafia.mates.map(m => esc(m.name) + (m.out ? ' (탈락)' : '')).join(', ') || '없음'}</b></p>
         ${(() => {
           const ready = v.mafia.killReadyAt <= serverNow() && !v.paused;
-          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} ${bigRed}>${ready ? (killByScan() ? '🔪 이름표 찍어 암살' : '🔪 암살하기') : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
+          return `<button class="danger" data-a="kill" data-needs-online ${ready ? '' : 'data-off="1"'} ${bigRed}>${ready ? (killByScan() ? '🔪 등 QR 찍어 암살' : '🔪 암살하기') : `🔪 암살 대기 <span data-until="${v.mafia.killReadyAt}" ${v.paused ? `data-frozen="${v.mafia.killRemainMs}"` : ''} data-unit="kr" data-done="rerender"></span>`}</button>`;
         })()}`
     : `<p class="small" style="margin:10px 0 0">명단은 회의에서 확인된 정보만 반영됩니다.</p>
         <button class="danger" data-a="bigList" ${bigRed}>📋 명단 크게 보기</button>`);
@@ -577,7 +577,7 @@ function viewDead() {
     <div class="big">당신은 쓰러졌습니다</div>
     <div class="card danger" style="text-align:left">
       <p>• <b>지금부터 말하지 마세요.</b></p>
-      <p>• 이름표를 뒤집어 <b>💀 사망 면(QR)</b>이 보이게 하고, 이 자리에서 발견될 때까지 기다리세요.</p>
+      <p>• <b>그 자리에 앉아</b> 발견될 때까지 기다리세요. 등 QR은 가리지 마세요.</p>
       <p>• 다른 곳에서 회의가 열리면 집결 장소로 이동하세요.</p>
       <p>• 회의가 끝나면 유령으로 임무를 이어 갑니다.</p>
     </div>

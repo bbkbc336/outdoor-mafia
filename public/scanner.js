@@ -37,7 +37,7 @@ const Scanner = (() => {
         <div id="scanMsg" style="position:absolute;top:12px;left:12px;right:12px;text-align:center;font-weight:800;text-shadow:0 2px 6px #000">${esc(title)}<br><span class="small">QR을 네모 안에 맞추세요</span></div>
       </div>
       <div class="bottom">
-        ${opts.noManual ? '<p class="small" style="margin:0 0 4px;text-align:center;color:var(--muted)">코드 입력 없이, 카메라로 목걸이 QR을 직접 찍어야 합니다.</p>' : ''}
+        ${opts.noManual ? '<p class="small" style="margin:0 0 4px;text-align:center;color:var(--muted)">코드 입력 없이, 카메라로 상대 등 QR을 직접 찍어야 합니다.</p>' : ''}
         <form id="codeForm" class="row" autocomplete="off" ${opts.noManual ? 'hidden' : ''}>
           <input id="codeInput" class="code" maxlength="12" placeholder="코드 입력" inputmode="text" autocapitalize="characters" style="flex:2">
           <button class="primary" style="flex:1">확인</button>

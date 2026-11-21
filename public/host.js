@@ -142,11 +142,11 @@ function tabRun(v) {
       <div class="grid2"><div class="stat"><b>${n}</b>입장</div><div class="stat"><b>${v.players.filter(p => p.ready).length}</b>준비</div></div>
       <div class="card"><p>배정 예정: 마피아 <b>${m}</b>명 · 시민 <b>${Math.max(0, n - m)}</b>명 <button class="sm" data-tab="settings">변경</button></p>
         ${okSetup ? '' : `<p style="color:var(--warn)">${n < 3 ? '최소 3명이 필요합니다.' : '마피아는 시민보다 적어야 합니다.'}</p>`}
-        ${noTag.length ? `<p style="color:var(--warn)">🏷 이름표 미연결 ${noTag.length}명: ${noTag.map(p => esc(p.name)).join(', ')}</p>
+        ${noTag.length ? `<p style="color:var(--warn)">🏷 등 QR 미연결 ${noTag.length}명: ${noTag.map(p => esc(p.name)).join(', ')}</p>
           <button data-run="assignTags" style="margin-bottom:10px">남은 번호 자동 배정</button>
-          <p class="small muted">자동 배정 후 참가자 화면에 뜬 번호의 목걸이를 나눠 주세요.</p>` : (n ? '<p style="color:var(--good)">🏷 모두 이름표 연결 완료</p>' : '')}
+          <p class="small muted">자동 배정 후 참가자 화면에 뜬 번호의 등 QR을 나눠 주세요.</p>` : (n ? '<p style="color:var(--good)">🏷 모두 등 QR 연결 완료</p>' : '')}
         <button class="primary" data-run="assign" ${okSetup && !noTag.length ? '' : 'disabled'}>역할 무작위 배정</button>
-        <p class="small muted">참가자는 입장한 뒤 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p>
+        <p class="small muted">참가자는 입장한 뒤 자기 등 QR을 찍어 연결하고 등에 붙입니다.</p>
       </div>`;
   } else if (v.phase === 'briefing') {
     const acked = v.players.filter(p => p.ack).length;
@@ -243,7 +243,7 @@ function tabSettings(v) {
     <label>회의 집결 장소</label><input name="gatherPlace" value="${esc(s.gatherPlace)}" ${locked ? 'disabled' : ''}>
     <label class="check"><input type="checkbox" name="revealEjectedRole" ${s.revealEjectedRole ? 'checked' : ''} ${locked ? 'disabled' : ''}> 추방된 사람의 역할 공개</label>
     <label class="check"><input type="checkbox" name="keepAwake" ${s.keepAwake !== false ? 'checked' : ''} ${locked ? 'disabled' : ''}> 게임 중 참가자 화면 켜 두기 (회의 알림을 놓치지 않게, 배터리 조금 더 씀)</label>
-    <label class="check"><input type="checkbox" name="killByScan" ${s.killByScan ? 'checked' : ''} ${locked ? 'disabled' : ''}> 암살은 상대 목걸이 이름표 QR을 직접 찍어야 함 (손 닿는 거리에서만 가능, 이름 목록으로는 암살 불가)</label>
+    <label class="check"><input type="checkbox" name="killByScan" ${s.killByScan ? 'checked' : ''} ${locked ? 'disabled' : ''}> 암살은 상대 등 QR을 직접 찍어야 함 (손 닿는 거리에서만 가능, 이름 목록으로는 암살 불가)</label>
     ${locked ? '' : '<button class="primary" style="margin-top:12px">설정 저장</button>'}
   </form>
   <div class="card"><h3>설정 파일</h3>
@@ -274,9 +274,9 @@ function tabPlaces(v) {
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank"><b>이름표 뒷면</b><small>양면 인쇄용</small></a>
         <a class="btn wide" href="${printBase}&what=blankTags&n=40" target="_blank"><b>이름표 01~40</b><small>앞뒤 나란히, 접어서</small></a>
       </div>
-      <p class="small muted">몸 부착용은 A4 일반 종이에 인쇄해 점선을 따라 자르고, QR 위아래 띠에 테이프를 붙여 옷에 고정하세요(QR 위로는 테이프를 붙이지 마세요. 반사돼 안 찍혀요). 목걸이 이름표와 같은 QR이라 몸에 붙인 QR을 찍어도 같은 사람으로 인식됩니다. 한 사람에게 같은 번호 2장(예: 등과 가슴)을 주세요.</p>
+      <p class="small muted">몸 부착용(등 QR)은 A4 일반 종이에 인쇄해 점선을 따라 자르고, QR 위아래 띠에 테이프를 붙여 <b>등</b>에 고정하세요(QR 위로는 테이프를 붙이지 마세요. 반사돼 안 찍혀요). 참가자는 등에 붙이기 전에 자기 QR을 먼저 찍어 연결합니다. 한 장에 같은 번호가 2장씩 나오니 1장은 예비로 두세요. 목걸이 이름표와 번호가 같아서 둘 중 무엇을 찍어도 같은 사람으로 인식됩니다.</p>
       <p class="small muted">이름표는 한 줄에 같은 사람의 <b>앞면(이름 칸)과 뒷면(💀 사망 + QR)</b>이 나란히 나와 A4 한 장에 2명입니다. 한 면만 인쇄해 바깥 점선을 자르고, 가운데 노란 점선에서 반으로 접으면 됩니다(01~40번은 20장). 양면 프린터가 있으면 '이름표 앞면'과 '이름표 뒷면'을 따로 뽑아 양면으로 인쇄하세요.</p>
-      <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 목걸이 QR을 찍어 이름표를 연결합니다.</p></div>
+      <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 등 QR을 찍어 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div id="locs">${H.locDraft.map((l, i) => `<div class="locedit" data-i="${i}">
       <div class="row"><input data-f="name" value="${esc(l.name)}" placeholder="장소 ${i + 1}" ${locked ? 'disabled' : ''} style="flex:3">

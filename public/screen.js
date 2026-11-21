@@ -65,7 +65,7 @@ function viewOf(v) {
       return `<div class="scr-grid"><div class="scr-join"><img src="/qr.svg?text=${encodeURIComponent(joinUrl)}" alt="입장 QR"><p class="scr-url">${esc(joinUrl.replace(/^https?:\/\//, ''))}</p></div>
         <div><div class="scr-kicker">방 코드</div><div class="scr-code">${esc(v.code)}</div>
         <div class="scr-stats"><div><b>${ps.length}</b>입장</div><div><b class="ok">${ps.filter(p => p.ready).length}</b>준비 완료</div></div>
-        ${waitLists(ps.filter(p => !p.ready), ps.filter(p => p.ready), '아직 준비 안 함', '준비 완료', p => (p.tag ? '' : '이름표 미연결'))}</div></div>`;
+        ${waitLists(ps.filter(p => !p.ready), ps.filter(p => p.ready), '아직 준비 안 함', '준비 완료', p => (p.tag ? '' : '등 QR 미연결'))}</div></div>`;
     }
     case 'briefing':
       return `<div class="scr-center"><div class="scr-title">역할 확인 중</div><div class="scr-big">${ps.filter(p => p.ack).length} / ${ps.length}</div><p class="scr-sub">각자 휴대폰에서 몰래 역할을 확인하세요</p>
