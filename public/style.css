@@ -352,9 +352,13 @@ label { display: block; margin: 12px 0 6px; font-weight: 600; color: var(--muted
 .pill.wait { border: 2px solid var(--line); color: var(--muted); }
 
 /* ───── 진행자용 큰 화면 (/screen) ───── */
-body.screen { background: #05070f; }
+/* TV·빔프로젝터는 어두운 색이 더 까맣게 나오므로, 참가자 화면보다 밝은 남색 우주 배경(별·성운은 공통 배경 그대로) */
+html:has(body.screen) { --bg: #0c1c52; }
 .scr { max-width: none; min-height: 100dvh; padding: 3vh 4vw; display: flex; flex-direction: column; gap: 3vh; color: #f4f7fb;
-  background: radial-gradient(ellipse 120% 40% at 50% 115%, #2b7de0 0, #0f2a6e 18%, transparent 40%), radial-gradient(ellipse at 50% 25%, #0b1330, #05070f 75%); }
+  background:
+    radial-gradient(ellipse 120% 42% at 50% 115%, rgba(70, 140, 255, .75) 0, rgba(40, 95, 215, .45) 22%, transparent 48%),
+    radial-gradient(ellipse 70% 55% at 50% 28%, rgba(110, 150, 255, .22), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 88% 10%, rgba(170, 110, 255, .22), transparent 70%); }
 .scr-wait { margin: auto; font-size: 3vw; }
 .scr-head { display: flex; justify-content: space-between; align-items: center; font-family: 'Black Han Sans', sans-serif; font-size: 2.6vw; color: #ffd23f; }
 .scr-phase { font-family: 'Black Han Sans', sans-serif; color: #3fd0ff; }
@@ -392,12 +396,12 @@ body.screen { background: #05070f; }
 .scr-body { flex: 1; display: grid; grid-template-columns: 1fr minmax(16vw, 22vw); gap: 2.5vw; min-height: 0; }
 .scr-mainview { display: flex; min-width: 0; }
 .scr-mainview > .scr-center { flex: 1; }
-.scr-alive { background: rgba(10, 16, 40, .75); border: .25vw solid #3fd0ff; border-radius: 1.6vw; padding: 1.6vw; display: flex; flex-direction: column; gap: 1vw; overflow: hidden; }
+.scr-alive { background: rgba(16, 32, 92, .72); border: .25vw solid #3fd0ff; border-radius: 1.6vw; padding: 1.6vw; display: flex; flex-direction: column; gap: 1vw; overflow: hidden; }
 .sa-head { font-family: 'Black Han Sans', sans-serif; font-size: 2vw; color: #9ff5c9; }
 .sa-head b { font-family: 'Orbitron', sans-serif; font-size: 2.6vw; color: #fff; }
 .sa-head.out { color: #ff8a95; margin-top: .6vw; }
 .scr-alive ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .6vw; }
-.scr-alive li { font-size: 1.6vw; font-weight: 700; padding: .4vw 1vw; border-radius: 99vw; background: #1d2a55; color: #f4f7fb; }
+.scr-alive li { font-size: 1.6vw; font-weight: 700; padding: .4vw 1vw; border-radius: 99vw; background: #2c46a0; color: #fff; }
 .scr-alive ul.out li { background: transparent; border: .2vw solid #5a2a35; color: #9a8a90; text-decoration: line-through; }
 .scr-alive ul.out li small { margin-left: .5vw; font-size: 1.1vw; text-decoration: none; display: inline-block; }
 @media (max-width: 700px) { .scr-body { grid-template-columns: 1fr; } .scr-alive li { font-size: 14px; } .sa-head { font-size: 16px; } }
