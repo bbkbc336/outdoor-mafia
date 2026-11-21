@@ -4,9 +4,12 @@
 (function () {
   var ua = navigator.userAgent || '';
   if (!/KAKAOTALK/i.test(ua)) return;
+  // 처음 연 주소를 바로 기억합니다. 진행자·큰 화면 페이지는 열리자마자 주소에서 진행자 열쇠(key)를 지우므로,
+  // 나중에 location.href를 읽으면 열쇠 없는 주소가 외부 브라우저로 넘어가 진행자로 들어가지 못합니다.
+  var target = location.href;
   var open = function () {
-    if (window.__kakaoTest) { window.__kakaoTest.push(location.href); return; } // 시험용: 실제로 이동하지 않음
-    location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+    if (window.__kakaoTest) { window.__kakaoTest.push(target); return; } // 시험용: 실제로 이동하지 않음
+    location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(target);
   };
   // 안내 화면을 먼저 띄우고 바로 외부 브라우저로 넘깁니다. 넘어간 뒤 카카오톡 창에는 이 안내가 남습니다.
   var show = function () {
