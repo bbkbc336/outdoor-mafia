@@ -350,7 +350,7 @@ function tabMissions(v) {
   const locOpts = (sel) => `<option value="">장소 선택</option>` + v.locations.map(l => `<option value="${esc(l.id)}" ${l.id === sel ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
   const head = d.length
     ? `<p>등록된 임무 <b>${d.length}개</b> 중에서 한 사람에게 <b>${Math.min(per, d.length)}개</b>씩, 사람마다 다른 순서로 배정합니다.</p>
-       ${d.length < per ? `<p style="color:var(--warn)">1인당 임무 수(${per}개)보다 목록이 적어 ${d.length}개씩만 배정됩니다.</p>` : ''}`
+       ${d.length < per ? `<p class="small muted">1인당 임무 수(${per}개)가 목록(${d.length}개)보다 많아 목록을 반복해 ${per}개씩 배정합니다.</p>` : ''}`
     : '<p>임무 목록이 비어 있어 <b>장소마다 미니게임을 무작위로 배정</b>합니다. 장소에는 QR만 두면 됩니다. 직접 정하려면 임무를 추가하세요.</p>';
   return `${locked ? '<div class="card">임무는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
     <div class="card">${head}<p class="small muted">장소를 먼저 장소·QR 탭에서 저장해야 여기에서 고를 수 있습니다.</p></div>

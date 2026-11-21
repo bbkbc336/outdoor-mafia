@@ -114,6 +114,21 @@ console.log('\n[암살: 이름표 QR 찍기 모드]');
   ok(G.kill(r3, m, c.id, r3.phaseSeq).targetName === c.name, '모드가 꺼져 있으면 지금처럼 목록으로 암살');
 }
 
+console.log('\n[1인당 임무 수가 등록 목록보다 많을 때]');
+{
+  const r5 = G.createRoom(new Set());
+  G.saveLocations(r5, [{ name: '매점' }, { name: '정문' }]);
+  const [A, B] = r5.locations;
+  G.saveMissions(r5, [{ type: 'visit', loc: A.id }, { type: 'game', loc: B.id, game: 'fire' }]);
+  ['가', '나', '다', '라', '마'].forEach(n => G.join(r5, n));
+  G.assignTags(r5); G.updateSettings(r5, { mafiaCount: 1, startProtect: 0, tasksPerPlayer: 5 });
+  G.assignRoles(r5);
+  const cs = G.list(r5).filter(x => x.role === 'citizen');
+  ok(G.list(r5).every(p => p.tasks.length === 5), '목록이 2개여도 1인당 5개씩 배정');
+  ok(r5.citizenTaskTotal === cs.length * 5, `시민 전체 임무 수도 늘어남 (${r5.citizenTaskTotal}개)`);
+  ok(G.list(r5).every(p => p.tasks.every((t, i) => i === 0 || t.mid !== p.tasks[i - 1].mid)), '같은 임무가 연달아 나오지 않음');
+}
+
 console.log('\n[장소 사진]');
 {
   const r4 = G.createRoom(new Set());
