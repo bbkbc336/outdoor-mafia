@@ -326,13 +326,13 @@ function tabPlaces(v) {
       <div class="printgrid">
         <a class="btn" href="${printBase}&what=blankPlaces&n=10" target="_blank"><b>장소 01~10</b><small>A4 한 장에 1곳</small></a>
         <a class="btn" href="${printBase}&what=blankPlaces&n=10&bw=1" target="_blank"><b>장소 01~10 흑백용</b><small>흰 바탕, 토너 절약</small></a>
-        <a class="btn" href="${printBase}&what=bodyTags&n=40" target="_blank"><b>몸 부착용 01~40</b><small>한 장에 2번호 × 2장, 테이프</small></a>
-        <a class="btn" href="${printBase}&what=bodyTags&n=40&bw=1" target="_blank"><b>몸 부착용 흑백용</b><small>흰 바탕, 토너 절약</small></a>
+        <a class="btn" href="${printBase}&what=bodyTags&n=40" target="_blank"><b>등 QR 01~40</b><small>한 장에 1명 크게, 테이프</small></a>
+        <a class="btn" href="${printBase}&what=bodyTags&n=40&bw=1" target="_blank"><b>등 QR 흑백용</b><small>흰 바탕, 토너 절약</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=front" target="_blank"><b>이름표 앞면</b><small>양면 인쇄용</small></a>
         <a class="btn" href="${printBase}&what=blankTags&n=40&side=back" target="_blank"><b>이름표 뒷면</b><small>양면 인쇄용</small></a>
         <a class="btn wide" href="${printBase}&what=blankTags&n=40" target="_blank"><b>이름표 01~40</b><small>앞뒤 나란히, 접어서</small></a>
       </div>
-      <p class="small muted">몸 부착용(등 QR)은 A4 일반 종이에 인쇄해 점선을 따라 자르고, QR 위아래 띠에 테이프를 붙여 <b>등</b>에 고정하세요(QR 위로는 테이프를 붙이지 마세요. 반사돼 안 찍혀요). 참가자는 등에 붙이기 전에 자기 QR을 먼저 찍어 연결합니다. 한 장에 같은 번호가 2장씩 나오니 1장은 예비로 두세요. 목걸이 이름표와 번호가 같아서 둘 중 무엇을 찍어도 같은 사람으로 인식됩니다.</p>
+      <p class="small muted">등 QR은 A4 한 장에 한 명씩 크게 나옵니다(40명이면 40장). 일반 종이에 인쇄해 점선을 따라 자르고, QR 위아래 띠에 테이프를 붙여 <b>등</b>에 고정하세요(QR 위로는 테이프를 붙이지 마세요. 반사돼 안 찍혀요). 참가자는 등에 붙이기 전에 자기 QR을 먼저 찍어 연결합니다. 목걸이 이름표와 번호가 같아서 둘 중 무엇을 찍어도 같은 사람으로 인식됩니다.</p>
       <p class="small muted">이름표는 한 줄에 같은 사람의 <b>앞면(이름 칸)과 뒷면(💀 사망 + QR)</b>이 나란히 나와 A4 한 장에 2명입니다. 한 면만 인쇄해 바깥 점선을 자르고, 가운데 노란 점선에서 반으로 접으면 됩니다(01~40번은 20장). 양면 프린터가 있으면 '이름표 앞면'과 '이름표 뒷면'을 따로 뽑아 양면으로 인쇄하세요.</p>
       <p class="small muted">장소 QR은 01~10번으로 고정입니다. 10장을 한 번 뽑아 두면 모든 방·행사에서 그대로 씁니다. 장소를 5곳만 쓰면 01~05번만 붙이면 됩니다. 참가자는 입장 후 자기 등 QR을 찍어 연결합니다.</p></div>
     ${locked ? '<div class="card">장소는 대기 단계에서만 바꿀 수 있습니다.</div>' : ''}
